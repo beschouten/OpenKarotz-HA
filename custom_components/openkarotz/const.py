@@ -5,7 +5,7 @@ DOMAIN = "openkarotz"
 
 # API endpoints
 API_BASE_URL = "http://192.168.1.201"
-API_ENDPOINTs = {
+API_ENDPOINTS = {
     "GET_INFO": "/api",
     "GET_STATE": "/state",
     "GET_LEDS": "/leds",
@@ -45,7 +45,7 @@ SENSOR_TYPES = {
 # Light attributes
 LIGHT_ATTRIBUTES = {
     "COLOR": "color",
-    "BRIGHTness": "brightness",
+    "BRIGHTNESS": "brightness",
     "COLOR_TEMPERATURE": "color_temperature",
     "PRESET": "preset",
     "RGB_VALUE": "rgb_value",
@@ -54,7 +54,7 @@ LIGHT_ATTRIBUTES = {
 # Media player attributes
 MEDIA_PLAYER_ATTRIBUTES = {
     "VOLUME": "volume",
-    "PLAYback_STATE": "playback_state",
+    "PLAYBACK_STATE": "playback_state",
     "CURRENT_SOURCE": "current_source",
     "CATEGORY": "category",
     "SCHEDULE": "schedule",

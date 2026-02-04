@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 
-from openkarotz.api import OpenKarotzAPI, OpenKarotzConnectionError
-from openkarotz.coordinator import OpenKarotzCoordinator
+from custom_components.openkarotz.api import OpenKarotzAPI, OpenKarotzConnectionError
+from custom_components.openkarotz.coordinator import OpenKarotzCoordinator
 
 
 @pytest.fixture
@@ -144,6 +144,7 @@ async def test_coordinator_update(mock_api):
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_coordinator_device_info(mock_api):
     """Test coordinator device info property."""
     mock_api.get_info.return_value = {
@@ -162,9 +163,10 @@ async def test_coordinator_device_info(mock_api):
     assert device_info["manufacturer"] == "OpenKarotz"
 
 
+@pytest.mark.asyncio
 def test_constants_defined():
     """Test that all required constants are defined."""
-    from openkarotz import const
+    from custom_components.openkarotz import const
     
     assert hasattr(const, 'DOMAIN')
     assert hasattr(const, 'DEFAULT_PORT')

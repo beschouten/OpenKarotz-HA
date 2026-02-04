@@ -42,36 +42,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except Exception as e:
             _LOGGER.error(f"Error playing audio: {e}")
 
-async def handle_stop_audio(service: ServiceCall) -> None:
-         """Handle stop audio service."""
-         try:
-             coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
-             api = coordinator["api"]
-             await api.stop_audio(source=service.data.get("source"))
-         except Exception as e:
-             _LOGGER.error(f"Error stopping audio: {e}")
-
-     async def handle_set_volume(service: ServiceCall) -> None:
-         """Handle set volume service."""
-         try:
-             coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
-             api = coordinator["api"]
-             await api.set_volume(service.data.get("volume", 50))
-         except Exception as e:
-             _LOGGER.error(f"Error setting volume: {e}")
-
-     async def handle_play_tts(service: ServiceCall) -> None:
-         """Handle play TTS service."""
-         try:
-             coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
-             api = coordinator["api"]
-             await api.play_tts(
-                 text=service.data.get("text"),
-                 voice=service.data.get("voice"),
-                 category=service.data.get("category"),
-             )
-         except Exception as e:
-             _LOGGER.error(f"Error playing TTS: {e}")
+    async def handle_stop_audio(service: ServiceCall) -> None:
+        """Handle stop audio service."""
+        try:
+            coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
+            api = coordinator["api"]
+            await api.stop_audio(source=service.data.get("source"))
+        except Exception as e:
+            _LOGGER.error(f"Error stopping audio: {e}")
 
     async def handle_set_volume(service: ServiceCall) -> None:
         """Handle set volume service."""
@@ -119,59 +97,50 @@ async def handle_stop_audio(service: ServiceCall) -> None:
         except Exception as e:
             _LOGGER.error(f"Error displaying picture: {e}")
 
-    # Register services
-    platform = async_get_entity_platform(hass, DOMAIN)
-
-    # Set LED service
-    platform.async_register_service(
+    # Register services using hass.services.async_register
+    hass.services.async_register(
         DOMAIN,
         SERVICE_NAMES["SET_LED"],
         handle_set_led,
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["set_led"]),
     )
 
-    # Play audio service
-    platform.async_register_service(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_NAMES["PLAY_AUDIO"],
         handle_play_audio,
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["play_audio"]),
     )
 
-    # Stop audio service
-    platform.async_register_service(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_NAMES["STOP_AUDIO"],
         handle_stop_audio,
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["stop_audio"]),
     )
 
-    # Set volume service
-    platform.async_register_service(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_NAMES["SET_VOLUME"],
         handle_set_volume,
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["set_volume"]),
     )
 
-    # Play TTS service
-    platform.async_register_service(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_NAMES["PLAY_TTS"],
         handle_play_tts,
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["play_tts"]),
     )
 
-    # Play sound service
-    platform.async_register_service(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_NAMES["PLAY_SOUND"],
         handle_play_sound,
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["play_sound"]),
     )
 
-    # Display picture service
-    platform.async_register_service(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_NAMES["DISPLAY_PICTURE"],
         handle_display_picture,

@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from openkarotz.api import OpenKarotzAPI
+from .api import OpenKarotzAPI
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class OpenKarotzConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             host = user_input[CONF_HOST]
-            port = user_input.get(CONF_PORT, 80)
+            port = int(user_input.get(CONF_PORT, 80))
 
             # Test connection
             try:

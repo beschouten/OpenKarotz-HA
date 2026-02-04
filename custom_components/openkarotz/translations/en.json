@@ -1,5 +1,3 @@
-"""OpenKarotz translations."""
-
 {
   "config_flow": {
     "title": "OpenKarotz",

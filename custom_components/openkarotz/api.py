@@ -4,11 +4,10 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 from urllib.parse import urljoin
 
 import aiohttp
-import websocket
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
@@ -55,17 +54,15 @@ class OpenKarotzAPI:
         self.timeout = timeout
         self.base_url = f"http://{host}:{port}"
         self.session: Optional[aiohttp.ClientSession] = None
-        self.websocket_client: Optional[websocket.WebSocketApp] = None
-        self._websocket_callback: Optional[callable] = None
         self._is_connected = False
 
     async def async_connect(self) -> bool:
         """Establish connection to OpenKarotz device."""
         try:
-            # Initialize HTTP session
-            self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout))
+            self.session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=self.timeout)
+            )
 
-            # Test connection
             try:
                 await self._async_request("GET", "/api")
             except Exception as e:
@@ -86,10 +83,6 @@ class OpenKarotzAPI:
         if self.session:
             await self.session.close()
             self.session = None
-
-        if self.websocket_client:
-            self.websocket_client.close()
-            self.websocket_client = None
 
         self._is_connected = False
         _LOGGER.info("Disconnected from OpenKarotz")
@@ -142,7 +135,7 @@ class OpenKarotzAPI:
         except aiohttp.ClientResponseError as e:
             if e.status == 401:
                 raise OpenKarotzAuthenticationError("Authentication failed")
-            raise OpenKarotzAPIError(f"API error: {e.status} - {e.message}")
+            raise OpenKarotzAPIError(f"API error: {e.status}")
 
     async def get_info(self) -> Dict[str, Any]:
         """Get device information.
@@ -292,148 +285,4 @@ class OpenKarotzAPI:
         Returns:
             API response
         """
-        data = {"text": text}
-        if voice is not None:
-            data["voice"] = voice
-        if category is not None:
-            data["category"] = category
-
-        return await self._async_request("POST", "/tts", data)
-
-    async def get_pictures(self) -> Dict[str, Any]:
-        """Get picture information.
-
-        Returns:
-            Dictionary with picture information
-        """
-        return await self._async_request("GET", "/pictures")
-
-    async def display_picture(
-        self,
-        picture: str,
-        duration: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        """Display a picture.
-
-        Args:
-            picture: Picture identifier
-            duration: Display duration in seconds
-
-        Returns:
-            API response
-        """
-        data = {"picture": picture}
-        if duration is not None:
-            data["duration"] = duration
-
-        return await self._async_request("POST", "/pictures", data)
-
-    async def get_sounds(self) -> Dict[str, Any]:
-        """Get sound information.
-
-        Returns:
-            Dictionary with sound information
-        """
-        return await self._async_request("GET", "/sounds")
-
-    async def play_sound(
-        self,
-        sound: str,
-        volume: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        """Play a sound.
-
-        Args:
-            sound: Sound identifier
-            volume: Volume level (0-100)
-
-        Returns:
-            API response
-        """
-        data = {"sound": sound}
-        if volume is not None:
-            data["volume"] = volume
-
-        return await self._async_request("POST", "/sounds", data)
-
-    async def get_apps(self) -> Dict[str, Any]:
-        """Get installed applications information.
-
-        Returns:
-            Dictionary with application information
-        """
-        return await self._async_request("GET", "/apps")
-
-    def set_websocket_callback(self, callback: callable) -> None:
-        """Set callback for WebSocket events.
-
-        Args:
-            callback: Function to call on WebSocket events
-        """
-        self._websocket_callback = callback
-
-    async def connect_websocket(self, callback: callable) -> None:
-        """Connect to WebSocket for real-time updates.
-
-        Args:
-            callback: Function to call on WebSocket events
-        """
-        self._websocket_callback = callback
-
-        ws_url = f"ws://{self.host}:{self.port}/ws"
-
-        def on_message(ws, message):
-            """Handle incoming WebSocket messages."""
-            try:
-                data = json.loads(message)
-                if self._websocket_callback:
-                    self._websocket_callback(data)
-            except json.JSONDecodeError as e:
-                _LOGGER.error(f"Invalid WebSocket message: {e}")
-
-        def on_error(ws, error):
-            """Handle WebSocket errors."""
-            _LOGGER.error(f"WebSocket error: {error}")
-
-        def on_close(ws, close_status_code, close_msg):
-            """Handle WebSocket close."""
-            _LOGGER.info(f"WebSocket closed: {close_status_code} - {close_msg}")
-            self._is_connected = False
-            # Attempt reconnection
-            asyncio.create_task(self._reconnect_websocket())
-
-        def on_open(ws):
-            """Handle WebSocket open."""
-            _LOGGER.info("WebSocket connected")
-            self._is_connected = True
-
-        self.websocket_client = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error,
-            on_close=on_close,
-        )
-
-        # Run WebSocket in separate thread
-        import threading
-
-        def run_websocket():
-            self.websocket_client.run_forever()
-
-        websocket_thread = threading.Thread(target=run_websocket, daemon=True)
-        websocket_thread.start()
-
-    async def _reconnect_websocket(self) -> None:
-        """Attempt to reconnect WebSocket."""
-        for attempt in range(DEFAULT_RECONNECT_ATTEMPTS):
-            _LOGGER.info(f"Reconnecting WebSocket (attempt {attempt + 1}/{DEFAULT_RECONNECT_ATTEMPTS})")
-            await asyncio.sleep(DEFAULT_RECONNECT_DELAY)
-            if self._is_connected:
-                break
-            if self._websocket_callback:
-                await self.connect_websocket(self._websocket_callback)
-
-    async def close(self) -> None:
-        """Close all connections."""
-        await self.async_disconnect()
+     

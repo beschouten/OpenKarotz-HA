@@ -1,6 +1,7 @@
 """OpenKarotz binary sensors."""
 
 import logging
+from typing import Any, Dict, Optional
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -8,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import ATTR_DEVICE_ID
+from .const import ATTR_CONNECTION_STATUS
 
 from .api import OpenKarotzAPI
 from .coordinator import OpenKarotzCoordinator
@@ -50,7 +52,11 @@ class OpenKarotzRFIDSensor(OpenKarotzBinarySensor):
     """RFID detection sensor."""
 
     _attr_name = "RFID Detection"
-    _attr_unique_id = f"{coordinator.data.get(ATTR_DEVICE_ID, 'unknown')}_rfid_detection"
+    _attr_unique_id = "rfid_detection"
+    """RFID detection sensor."""
+
+    _attr_name = "RFID Detection"
+    _attr_unique_id = "rfid_detection"
 
     @property
     def is_on(self) -> bool:
