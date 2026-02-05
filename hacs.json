@@ -2,7 +2,7 @@
 
 {
   "name": "OpenKarotz Home Assistant Integration",
-  "filename": "openkarotz-ha",
+  "filename": "openkarotz",
   "author": "beschouten",
   "description": "A comprehensive Home Assistant integration for OpenKarotz devices, enabling seamless control and monitoring through the Home Assistant Community Store (HACS).",
   "version": "1.0.0",

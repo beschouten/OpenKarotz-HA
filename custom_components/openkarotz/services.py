@@ -97,6 +97,36 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except Exception as e:
             _LOGGER.error(f"Error displaying picture: {e}")
 
+    async def handle_move_ears(service: ServiceCall) -> None:
+        """Handle move ears service."""
+        try:
+            coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
+            api = coordinator["api"]
+            await api.move_ears(
+                left=service.data.get("left"),
+                right=service.data.get("right"),
+            )
+        except Exception as e:
+            _LOGGER.error(f"Error moving ears: {e}")
+
+    async def handle_ear_mode(service: ServiceCall) -> None:
+        """Handle ear mode service."""
+        try:
+            coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
+            api = coordinator["api"]
+            await api.ears_mode(mode=service.data.get("mode"))
+        except Exception as e:
+            _LOGGER.error(f"Error setting ear mode: {e}")
+
+    async def handle_ear_reset(service: ServiceCall) -> None:
+        """Handle ear reset service."""
+        try:
+            coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
+            api = coordinator["api"]
+            await api.ears_reset()
+        except Exception as e:
+            _LOGGER.error(f"Error resetting ears: {e}")
+
     # Register services using hass.services.async_register
     hass.services.async_register(
         DOMAIN,
@@ -145,6 +175,27 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_NAMES["DISPLAY_PICTURE"],
         handle_display_picture,
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["display_picture"]),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_NAMES["MOVE_EARS"],
+        handle_move_ears,
+        schema=vol.Schema(SERVICE_DATA_SCHEMAS["move_ears"]),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_NAMES["EAR_MODE"],
+        handle_ear_mode,
+        schema=vol.Schema(SERVICE_DATA_SCHEMAS["ear_mode"]),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_NAMES["EAR_RESET"],
+        handle_ear_reset,
+        schema=vol.Schema(SERVICE_DATA_SCHEMAS["ear_reset"]),
     )
 
     _LOGGER.info("OpenKarotz services registered")

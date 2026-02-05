@@ -286,3 +286,97 @@ class OpenKarotzAPI:
             API response
         """
      
+        data = {"text": text}
+        if voice is not None:
+            data["voice"] = voice
+        if category is not None:
+            data["category"] = category
+
+        return await self._async_request("POST", "/tts", data)
+
+    async def move_ears(self, left: int, right: int) -> Dict[str, Any]:
+        """Move ears to specified positions.
+
+        Args:
+            left: Left ear position (0-180 degrees)
+            right: Right ear position (0-180 degrees)
+
+        Returns:
+            API response
+        """
+        return await self._async_request("POST", "/ears", {"left": left, "right": right})
+
+    async def ears_mode(self, mode: str) -> Dict[str, Any]:
+        """Set ear mode.
+
+        Args:
+            mode: Ear mode ("disabled", "random")
+
+        Returns:
+            API response
+        """
+        return await self._async_request("POST", "/ears", {"mode": mode})
+
+    async def ears_reset(self) -> Dict[str, Any]:
+        """Reset ears to center position.
+
+        Returns:
+            API response
+        """
+        return await self._async_request("POST", "/ears", {"reset": True})
+
+    async def play_sound(self, sound: str, volume: Optional[int] = None) -> Dict[str, Any]:
+        """Play a sound.
+
+        Args:
+            sound: Sound identifier
+            volume: Volume level (0-100)
+
+        Returns:
+            API response
+        """
+        data = {"sound": sound}
+        if volume is not None:
+            data["volume"] = volume
+
+        return await self._async_request("POST", "/sounds", data)
+
+    async def display_picture(self, picture: str, duration: Optional[int] = None) -> Dict[str, Any]:
+        """Display a picture.
+
+        Args:
+            picture: Picture identifier
+            duration: Display duration in seconds
+
+        Returns:
+            API response
+        """
+        data = {"picture": picture}
+        if duration is not None:
+            data["duration"] = duration
+
+        return await self._async_request("POST", "/pictures", data)
+
+    async def get_pictures(self) -> Dict[str, Any]:
+        """Get pictures information.
+
+        Returns:
+            Dictionary with pictures information
+        """
+        return await self._async_request("GET", "/pictures")
+
+    async def get_sounds(self) -> Dict[str, Any]:
+        """Get sounds information.
+
+        Returns:
+            Dictionary with sounds information
+        """
+        return await self._async_request("GET", "/sounds")
+
+    async def get_apps(self) -> Dict[str, Any]:
+        """Get applications information.
+
+        Returns:
+            Dictionary with applications information
+        """
+        return await self._async_request("GET", "/apps")

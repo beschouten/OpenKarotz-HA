@@ -32,6 +32,9 @@ SERVICE_NAMES = {
     "PLAY_SOUND": "play_sound",
     "DISPLAY_PICTURE": "display_picture",
     "TRIGGER_RFID": "trigger_rfid",
+    "MOVE_EARS": "move_ears",
+    "EAR_MODE": "ear_mode",
+    "EAR_RESET": "ear_reset",
 }
 
 # Sensor types
@@ -119,6 +122,14 @@ SERVICE_DATA_SCHEMAS = {
         "rfid_id": "string",
         "action": "string",
     },
+    "move_ears": {
+        "left": "integer",
+        "right": "integer",
+    },
+    "ear_mode": {
+        "mode": "string",
+    },
+    "ear_reset": {},
 }
 
 # Default values
