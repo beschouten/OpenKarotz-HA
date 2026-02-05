@@ -5,7 +5,7 @@
   "filename": "openkarotz",
   "author": "beschouten",
   "description": "A comprehensive Home Assistant integration for OpenKarotz devices, enabling seamless control and monitoring through the Home Assistant Community Store (HACS).",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "documentation": "https://github.com/beschouten/OpenKarotzHomeAssistant",
   "iot_class": "local_polling",
   "codeowners": ["@beschouten"],
