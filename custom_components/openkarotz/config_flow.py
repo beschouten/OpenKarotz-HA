@@ -60,6 +60,12 @@ class OpenKarotzConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=DATA_SCHEMA,
             errors=errors,
+            description_placeholders={
+                "host": "The IP address of your OpenKarotz device",
+                "port": "The port number (default: 80)",
+                "example_host": "192.168.1.201",
+                "example_port": "80"
+            },
         )
 
     def _check_duplicate(self, host: str, port: int) -> bool:
