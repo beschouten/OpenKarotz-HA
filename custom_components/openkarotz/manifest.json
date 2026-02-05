@@ -1,7 +1,7 @@
 {
   "domain": "openkarotz",
   "name": "OpenKarotz",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A comprehensive Home Assistant integration for OpenKarotz devices",
   "codeowners": ["@beschouten"],
   "config_flow": true,
