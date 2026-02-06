@@ -1,0 +1,233 @@
+set_led:
+  name: Set LED
+  description: Set LED color, brightness, or preset
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    color:
+      name: Color
+      description: Color name (red, green, blue, yellow, cyan, magenta, white, black)
+      required: false
+      example: "red"
+    brightness:
+      name: Brightness
+      description: Brightness level (0-100)
+      required: false
+      example: 50
+    color_temperature:
+      name: Color Temperature
+      description: Color temperature in Kelvin
+      required: false
+      example: 3000
+    preset:
+      name: Preset
+      description: Preset color scheme name
+      required: false
+      example: "happy"
+    rgb_value:
+      name: RGB Value
+      description: RGB color value in hex (e.g., FF0000)
+      required: false
+      example: "FF0000"
+
+play_audio:
+  name: Play Audio
+  description: Play audio from a source
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    source:
+      name: Source
+      description: Audio source identifier
+      required: true
+      example: "music"
+    category:
+      name: Category
+      description: Audio category (alarm, notification, etc.)
+      required: false
+      example: "notification"
+    volume:
+      name: Volume
+      description: Volume level (0-100)
+      required: false
+      example: 80
+
+stop_audio:
+  name: Stop Audio
+  description: Stop playing audio
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    source:
+      name: Source
+      description: Audio source to stop
+      required: false
+      example: "music"
+
+set_volume:
+  name: Set Volume
+  description: Set audio volume level
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    volume:
+      name: Volume
+      description: Volume level (0-100)
+      required: true
+      example: 50
+
+play_tts:
+  name: Play TTS
+  description: Play text-to-speech
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    text:
+      name: Text
+      description: Text to speak
+      required: true
+      example: "Hello, this is a test"
+    voice:
+      name: Voice
+      description: Voice identifier
+      required: false
+      example: "default"
+    category:
+      name: Category
+      description: TTS category
+      required: false
+      example: "notification"
+
+play_sound:
+  name: Play Sound
+  description: Play a sound
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    sound:
+      name: Sound
+      description: Sound identifier
+      required: true
+      example: "alarm"
+    volume:
+      name: Volume
+      description: Volume level (0-100)
+      required: false
+      example: 80
+
+display_picture:
+  name: Display Picture
+  description: Display a picture
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    picture:
+      name: Picture
+      description: Picture identifier
+      required: true
+      example: "smile"
+    duration:
+      name: Duration
+      description: Display duration in seconds
+      required: false
+      example: 30
+
+move_ears:
+  name: Move Ears
+  description: Move ears to specified positions
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    left:
+      name: Left Ear
+      description: Left ear position (0-180 degrees)
+      required: true
+      example: 90
+    right:
+      name: Right Ear
+      description: Right ear position (0-180 degrees)
+      required: true
+      example: 90
+
+ear_mode:
+  name: Ear Mode
+  description: Set ear mode (disabled, random)
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    mode:
+      name: Mode
+      description: Ear mode
+      required: true
+      example: "random"
+
+ear_reset:
+  name: Reset Ears
+  description: Reset ears to center position
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+
+set_led_color:
+  name: Set LED Color
+  description: Set LED to a predefined color
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The ID of the OpenKarotz integration
+      required: true
+      example: "abc123"
+    color:
+      name: Color
+      description: Predefined color name
+      required: true
+      example: "red"
+      selector:
+        select:
+          options:
+            - label: Red
+              value: red
+            - label: Green
+              value: green
+            - label: Blue
+              value: blue
+            - label: Yellow
+              value: yellow
+            - label: Cyan
+              value: cyan
+            - label: Magenta
+              value: magenta
+            - label: White
+              value: white
+            - label: Black
+              value: black
