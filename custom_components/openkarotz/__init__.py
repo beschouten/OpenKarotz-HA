@@ -10,6 +10,9 @@ from .api import OpenKarotzAPI
 from .const import DOMAIN
 from .coordinator import OpenKarotzCoordinator
 from .services import async_setup_services
+from .config_flow import OpenKarotzConfigFlow
+
+__all__ = ["OpenKarotzConfigFlow"]
 
 _LOGGER = logging.getLogger(__name__)
 
