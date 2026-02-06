@@ -6,20 +6,20 @@ DOMAIN = "openkarotz"
 # API endpoints
 API_BASE_URL = "http://192.168.1.201"
 API_ENDPOINTS = {
-    "GET_INFO": "/api.html",
-    "GET_STATE": "/state",
-    "GET_LEDS": "/leds",
-    "GET_EARS": "/ears",
-    "GET_RFID": "/rfid",
-    "GET_TTS": "/tts",
-    "GET_PICTURES": "/pictures",
-    "GET_SOUNDS": "/sounds",
-    "GET_APPS": "/apps",
-    "POST_LEDS": "/leds",
-    "POST_EARS": "/ears",
-    "POST_TTS": "/tts",
-    "POST_PICTURES": "/pictures",
-    "POST_SOUNDS": "/sounds",
+     "GET_INFO": "/cgi-bin/info",
+     "GET_STATE": "/cgi-bin/state",
+     "GET_LEDS": "/cgi-bin/leds",
+     "GET_EARS": "/cgi-bin/ears",
+     "GET_RFID": "/cgi-bin/rfid",
+     "GET_TTS": "/cgi-bin/tts",
+     "GET_PICTURES": "/cgi-bin/pictures",
+     "GET_SOUNDS": "/cgi-bin/sounds",
+     "GET_APPS": "/cgi-bin/apps",
+     "POST_LEDS": "/cgi-bin/leds",
+     "POST_EARS": "/cgi-bin/ears",
+     "POST_TTS": "/cgi-bin/tts",
+     "POST_PICTURES": "/cgi-bin/pictures",
+     "POST_SOUNDS": "/cgi-bin/sounds",
 }
 
 # Service names

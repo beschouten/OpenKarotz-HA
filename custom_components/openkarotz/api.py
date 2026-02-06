@@ -12,10 +12,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
-    DEFAULT_PORT,
-    DEFAULT_TIMEOUT,
-    DEFAULT_RECONNECT_ATTEMPTS,
-    DEFAULT_RECONNECT_DELAY,
+     DEFAULT_PORT,
+     DEFAULT_TIMEOUT,
+     DEFAULT_RECONNECT_ATTEMPTS,
+     DEFAULT_RECONNECT_DELAY,
+     API_ENDPOINTS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ class OpenKarotzAPI:
             )
 
             try:
-                await self._async_request("GET", "/api.html", skip_connection_check=True)
+                await self._async_request("GET", API_ENDPOINTS["GET_INFO"], skip_connection_check=True)
             except Exception as e:
                 _LOGGER.error(f"Failed to connect to OpenKarotz: {e}")
                 await self.async_disconnect()
@@ -144,7 +145,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with device information
         """
-        return await self._async_request("GET", "/api.html", skip_connection_check=True)
+        return await self._async_request("GET", API_ENDPOINTS["GET_INFO"], skip_connection_check=True)
 
     async def get_state(self) -> Dict[str, Any]:
         """Get device state.
@@ -152,7 +153,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with device state
         """
-        return await self._async_request("GET", "/state")
+        return await self._async_request("GET", API_ENDPOINTS["GET_STATE"])
 
     async def get_leds(self) -> Dict[str, Any]:
         """Get LED information and state.
@@ -160,7 +161,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with LED information
         """
-        return await self._async_request("GET", "/leds")
+        return await self._async_request("GET", API_ENDPOINTS["GET_LEDS"])
 
     async def set_led(
         self,
@@ -194,7 +195,7 @@ params: Optional[Dict[str, Any]] = None,
         if rgb_value is not None:
             data["rgb_value"] = rgb_value
 
-        return await self._async_request("POST", "/leds", data)
+        return await self._async_request("POST", API_ENDPOINTS["POST_LEDS"], data)
 
     async def get_ears(self) -> Dict[str, Any]:
         """Get audio player information and state.
@@ -202,7 +203,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with audio player information
         """
-        return await self._async_request("GET", "/ears")
+        return await self._async_request("GET", API_ENDPOINTS["GET_EARS"])
 
     async def set_volume(self, volume: int) -> Dict[str, Any]:
         """Set audio player volume.
@@ -213,7 +214,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             API response
         """
-        return await self._async_request("POST", "/ears", {"volume": volume})
+        return await self._async_request("POST", API_ENDPOINTS["GET_EARS"], {"volume": volume})
 
     async def play_audio(
         self,
@@ -237,7 +238,7 @@ params: Optional[Dict[str, Any]] = None,
         if volume is not None:
             data["volume"] = volume
 
-        return await self._async_request("POST", "/ears", data)
+        return await self._async_request("POST", API_ENDPOINTS["GET_EARS"], data)
 
     async def stop_audio(self, source: Optional[str] = None) -> Dict[str, Any]:
         """Stop playing audio.
@@ -252,7 +253,7 @@ params: Optional[Dict[str, Any]] = None,
         if source is not None:
             data["source"] = source
 
-        return await self._async_request("POST", "/ears", data)
+        return await self._async_request("POST", API_ENDPOINTS["GET_EARS"], data)
 
     async def get_rfid(self) -> Dict[str, Any]:
         """Get RFID information and state.
@@ -260,7 +261,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with RFID information
         """
-        return await self._async_request("GET", "/rfid")
+        return await self._async_request("GET", API_ENDPOINTS["GET_RFID"])
 
     async def get_tts(self) -> Dict[str, Any]:
         """Get TTS information and state.
@@ -268,7 +269,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with TTS information
         """
-        return await self._async_request("GET", "/tts")
+        return await self._async_request("GET", API_ENDPOINTS["GET_TTS"])
 
     async def play_tts(
         self,
@@ -293,7 +294,7 @@ params: Optional[Dict[str, Any]] = None,
         if category is not None:
             data["category"] = category
 
-        return await self._async_request("POST", "/tts", data)
+        return await self._async_request("POST", API_ENDPOINTS["GET_TTS"], data)
 
     async def move_ears(self, left: int, right: int) -> Dict[str, Any]:
         """Move ears to specified positions.
@@ -305,7 +306,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             API response
         """
-        return await self._async_request("POST", "/ears", {"left": left, "right": right})
+        return await self._async_request("POST", API_ENDPOINTS["POST_LEDS"], {"left": left, "right": right})
 
     async def ears_mode(self, mode: str) -> Dict[str, Any]:
         """Set ear mode.
@@ -316,7 +317,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             API response
         """
-        return await self._async_request("POST", "/ears", {"mode": mode})
+        return await self._async_request("POST", API_ENDPOINTS["GET_EARS"], {"mode": mode})
 
     async def ears_reset(self) -> Dict[str, Any]:
         """Reset ears to center position.
@@ -324,7 +325,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             API response
         """
-        return await self._async_request("POST", "/ears", {"reset": True})
+        return await self._async_request("POST", API_ENDPOINTS["GET_EARS"], {"reset": True})
 
     async def play_sound(self, sound: str, volume: Optional[int] = None) -> Dict[str, Any]:
         """Play a sound.
@@ -340,7 +341,7 @@ params: Optional[Dict[str, Any]] = None,
         if volume is not None:
             data["volume"] = volume
 
-        return await self._async_request("POST", "/sounds", data)
+        return await self._async_request("POST", API_ENDPOINTS["GET_SOUNDS"], data)
 
     async def display_picture(self, picture: str, duration: Optional[int] = None) -> Dict[str, Any]:
         """Display a picture.
@@ -356,7 +357,7 @@ params: Optional[Dict[str, Any]] = None,
         if duration is not None:
             data["duration"] = duration
 
-        return await self._async_request("POST", "/pictures", data)
+        return await self._async_request("POST", API_ENDPOINTS["GET_PICTURES"], data)
 
     async def get_pictures(self) -> Dict[str, Any]:
         """Get pictures information.
@@ -364,7 +365,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with pictures information
         """
-        return await self._async_request("GET", "/pictures")
+        return await self._async_request("GET", API_ENDPOINTS["GET_PICTURES"])
 
     async def get_sounds(self) -> Dict[str, Any]:
         """Get sounds information.
@@ -372,7 +373,7 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with sounds information
         """
-        return await self._async_request("GET", "/sounds")
+        return await self._async_request("GET", API_ENDPOINTS["GET_SOUNDS"])
 
     async def get_apps(self) -> Dict[str, Any]:
         """Get applications information.
@@ -380,4 +381,4 @@ params: Optional[Dict[str, Any]] = None,
         Returns:
             Dictionary with applications information
         """
-        return await self._async_request("GET", "/apps")
+        return await self._async_request("GET", API_ENDPOINTS["GET_APPS"])
