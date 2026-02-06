@@ -128,15 +128,24 @@ class OpenKarotzLight(CoordinatorEntity[OpenKarotzCoordinator], LightEntity):
         data = {}
         if "brightness" in kwargs:
             data["brightness"] = kwargs["brightness"]
-        if "color" in kwargs:
-            rgb = kwargs["color"]
+        if color is not None:
+            rgb = color
             data["rgb_value"] = f"{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+        elif "rgb" in kwargs:
+            rgb = kwargs["rgb"]
+            data["rgb_value"] = f"{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+        elif "color_name" in kwargs:
+            if kwargs["color_name"] in PREDEFINED_COLORS:
+                rgb = PREDEFINED_COLORS[kwargs["color_name"]]
+                data["rgb_value"] = f"{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
         if "color_temperature" in kwargs:
             data["color_temperature"] = kwargs["color_temperature"]
-        if "rgb" in kwargs:
-            data["rgb_value"] = f"{kwargs['rgb'][0]:02x}{kwargs['rgb'][1]:02x}{kwargs['rgb'][2]:02x}"
 
-        await self.coordinator.api.set_led(led_id=led_id, **data)
+        if data:
+            await self.coordinator.api.set_led(led_id=led_id, **data)
+        else:
+            # Just turn on without changing color
+            await self.coordinator.api.set_led(led_id=led_id, brightness=100)
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off the light."""

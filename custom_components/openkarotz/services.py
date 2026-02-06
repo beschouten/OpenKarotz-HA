@@ -197,4 +197,36 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         schema=vol.Schema(SERVICE_DATA_SCHEMAS["ear_reset"]),
     )
 
+    async def handle_set_led_color(service: ServiceCall) -> None:
+        """Handle set LED color service."""
+        try:
+            coordinator = hass.data[DOMAIN][service.data.get("config_entry_id")]
+            api = coordinator["api"]
+            color_name = service.data.get("color")
+            
+            # Map color names to API format
+            color_map = {
+                "red": "red",
+                "green": "green",
+                "blue": "blue",
+                "yellow": "yellow",
+                "cyan": "cyan",
+                "magenta": "magenta",
+                "white": "white",
+                "black": "black",
+            }
+            
+            api_color = color_map.get(color_name, color_name)
+            await api.set_led(color=api_color)
+        except Exception as e:
+            _LOGGER.error(f"Error setting LED color: {e}")
+
+    # Register LED color service
+    hass.services.async_register(
+        DOMAIN,
+        "set_led_color",
+        handle_set_led_color,
+        schema=vol.Schema({vol.Required("color"): str}),
+    )
+
     _LOGGER.info("OpenKarotz services registered")
