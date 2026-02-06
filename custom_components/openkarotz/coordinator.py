@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 from homeassistant.core import HomeAssistant
@@ -34,7 +34,7 @@ class OpenKarotzCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             hass,
             _LOGGER,
             name="OpenKarotz",
-            update_interval=update_interval,
+            update_interval=timedelta(seconds=update_interval),
         )
         self.api = api
         self._device_info: Optional[Dict[str, Any]] = None
