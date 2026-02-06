@@ -124,7 +124,16 @@ params: Optional[Dict[str, Any]] = None,
                 params=params,
             ) as response:
                 response.raise_for_status()
-                return await response.json()
+                content_type = response.headers.get("Content-Type", "")
+                if "application/json" in content_type:
+                    return await response.json()
+                else:
+                    text = await response.text()
+                    try:
+                        return json.loads(text)
+                    except json.JSONDecodeError as e:
+                        _LOGGER.error(f"Invalid JSON response: {e}")
+                        raise OpenKarotzAPIError(f"Invalid response format: {e}")
 
         except aiohttp.ClientError as e:
             _LOGGER.error(f"API request error: {e}")
