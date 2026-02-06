@@ -22,8 +22,11 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-class OpenKarotzConfigFlow(config_entries.ConfigFlow):
+class OpenKarotzConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for OpenKarotz."""
+
+    VERSION = 1
+    MINOR_VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, str] | None = None) -> data_entry_flow.FlowResultType:
         """Handle the user step of the config flow."""
