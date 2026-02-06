@@ -3,12 +3,6 @@
 import logging
 
 from homeassistant.components.media_player import (
-    ATTR_MEDIA_DURATION,
-    ATTR_MEDIA_POSITION,
-    ATTR_MEDIA_TITLE,
-    ATTR_MEDIA_URI,
-    MEDIA_TYPE_MUSIC,
-    MEDIA_TYPE_UNKNOWN,
     MediaPlayerEntity,
     MediaPlayerEntityDescription,
 )
@@ -65,7 +59,7 @@ class OpenKarotzMediaPlayer(CoordinatorEntity[OpenKarotzCoordinator], MediaPlaye
     @property
     def available(self) -> bool:
         """Check if entity is available."""
-        return self.coordinator.data.get(ATTR_CONNECTION_STATUS) == "connected"
+        return self.coordinator.data.get("connection_status") == "connected"
 
     @property
     def supported_features(self) -> int:
@@ -73,9 +67,9 @@ class OpenKarotzMediaPlayer(CoordinatorEntity[OpenKarotzCoordinator], MediaPlaye
         features = 0
         ears_state = self.coordinator.ears_state or {}
         if ears_state.get("volume"):
-            features |= self.SUPPORT_VOLUME_SET | self.SUPPORT_VOLUME_STEP
+            features |= self.SUPPORT_SET_VOLUME | self.SUPPORT_VOLUME_STEP
         if ears_state.get("playback"):
-            features |= self.SUPPORT_PLAY_PAUSE | self.SUPPORT_STOP
+            features |= self.SUPPORT_PLAY | self.SUPPORT_PAUSE | self.SUPPORT_STOP
         return features
 
     @property
@@ -127,8 +121,8 @@ class OpenKarotzMediaPlayer(CoordinatorEntity[OpenKarotzCoordinator], MediaPlaye
         ears_state = self.coordinator.ears_state or {}
         current = ears_state.get("current", {})
         if current.get("type") == "music":
-            return MEDIA_TYPE_MUSIC
-        return MEDIA_TYPE_UNKNOWN
+            return "music"
+        return None
 
     @property
     def volume_level(self) -> float | None:
@@ -214,6 +208,6 @@ class OpenKarotzMediaPlayer(CoordinatorEntity[OpenKarotzCoordinator], MediaPlaye
             await self.async_pause()
         else:
             await self.async_play_media(
-                media_type=MEDIA_TYPE_UNKNOWN,
+                media_type=None,
                 media_id="play",
             )
