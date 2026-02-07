@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  homeassistant:
+    image: homeassistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
+    environment:
+      - TZ=UTC
+    networks:
+      - ha_network
+
+networks:
+  ha_network:
+    driver: bridge

@@ -1,0 +1,105 @@
+{
+  "config_flow": {
+    "title": "OpenKarotz",
+    "step": {
+      "user": {
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        },
+        "description": "Enter OpenKarotz device IP address and port"
+      },
+      "init": {
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        },
+        "description": "Configure OpenKarotz device settings"
+      }
+    },
+    "errors": {
+      "connection_failed": "Could not connect to OpenKarotz device"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "device_name": {
+        "name": "Device Name",
+        "description": "Name of the OpenKarotz device"
+      },
+      "device_state": {
+        "name": "Device State",
+        "description": "Current state of the device"
+      },
+      "memory_usage": {
+        "name": "Memory Usage",
+        "description": "Memory usage percentage"
+      },
+      "uptime": {
+        "name": "Device Uptime",
+        "description": "Device uptime in seconds"
+      }
+    },
+    "light": {
+      "led_light": {
+        "name": "LED Light",
+        "description": "Control the LED lighting system"
+      }
+    },
+    "media_player": {
+      "audio_player": {
+        "name": "Audio Player",
+        "description": "Control audio playback"
+      }
+    },
+    "binary_sensor": {
+      "rfid_detection": {
+        "name": "RFID Detection",
+        "description": "RFID card detection status"
+      }
+    },
+    "switch": {
+      "enable_device": {
+        "name": "Enable Device",
+        "description": "Enable or disable the OpenKarotz device"
+      }
+    }
+  },
+  "services": {
+    "set_led": {
+      "name": "Set LED",
+      "description": "Set LED color, brightness, or preset"
+    },
+    "play_audio": {
+      "name": "Play Audio",
+      "description": "Play audio from specified source"
+    },
+    "stop_audio": {
+      "name": "Stop Audio",
+      "description": "Stop audio playback"
+    },
+    "set_volume": {
+      "name": "Set Volume",
+      "description": "Set audio volume level"
+    },
+    "play_tts": {
+      "name": "Play TTS",
+      "description": "Play text-to-speech"
+    },
+    "play_sound": {
+      "name": "Play Sound",
+      "description": "Play a sound effect"
+    },
+    "display_picture": {
+      "name": "Display Picture",
+      "description": "Display a picture on the device"
+    }
+  },
+  "common": {
+    "connection_status": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Error"
+    }
+  }
+}
