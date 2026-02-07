@@ -71,8 +71,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     """Migrate old config entry to new format."""
     _LOGGER.info("Migrating configuration entry: %s from version %s", config_entry.entry_id, config_entry.version)
 
-    if config_entry.version <= 1:
+    if config_entry.version == 1:
+        # Migrate from version 1 to version 2
         new_data = {**config_entry.data}
         config_entry.version = 2
+        config_entry.minor_version = 0
+        hass.config_entries.async_update_entry(config_entry, data=new_data)
+        _LOGGER.info("Migration to version 2 complete")
 
     return True

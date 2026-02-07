@@ -6,7 +6,7 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant import config_entries, data_entry_flow
+from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from .api import OpenKarotzAPI
 
@@ -25,10 +25,12 @@ DATA_SCHEMA = vol.Schema(
 class OpenKarotzConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for OpenKarotz."""
 
-    VERSION = 1
-    MINOR_VERSION = 1
+    VERSION = 2
+    MINOR_VERSION = 0
 
-    async def async_step_user(self, user_input: dict[str, str] | None = None) -> data_entry_flow.FlowResultType:
+    async def async_step_user(
+        self, user_input: dict[str, str] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle the user step of the config flow."""
         errors = {}
 
@@ -75,7 +77,9 @@ class OpenKarotzConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class OpenKarotzOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for OpenKarotz."""
 
-    async def async_step_init(self, user_input: dict[str, str] | None = None) -> data_entry_flow.FlowResultType:
+    async def async_step_init(
+        self, user_input: dict[str, str] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle the options step."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

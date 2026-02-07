@@ -1,10 +1,11 @@
 """OpenKarotz Home Assistant Integration Constants."""
 
+import voluptuous as vol
+
 # Integration name and domain
 DOMAIN = "openkarotz"
 
 # API endpoints
-API_BASE_URL = "http://192.168.1.201"
 API_ENDPOINTS = {
       "GET_INFO": "/cgi-bin/status",
       "GET_STATE": "/cgi-bin/status",
@@ -62,15 +63,18 @@ TTS_ATTRIBUTES = {
 # Service data schemas
 SERVICE_DATA_SCHEMAS = {
     "set_led": {
-        "color": "string",
-        "brightness": "integer",
-        "color_temperature": "integer",
-        "preset": "string",
+        vol.Required("config_entry_id"): str,
+        vol.Optional("color"): str,
+        vol.Optional("brightness"): int,
+        vol.Optional("color_temperature"): int,
+        vol.Optional("preset"): str,
+        vol.Optional("rgb_value"): str,
     },
     "play_tts": {
-        "text": "string",
-        "voice": "string",
-        "category": "string",
+        vol.Required("config_entry_id"): str,
+        vol.Required("text"): str,
+        vol.Optional("voice"): str,
+        vol.Optional("category"): str,
     },
 }
 
