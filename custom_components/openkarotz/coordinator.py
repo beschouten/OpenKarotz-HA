@@ -10,9 +10,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import OpenKarotzAPI
 from .const import (
-    ATTR_CONNECTION_STATUS,
     ATTR_ERROR_MESSAGE,
-    ATTR_DEVICE_ID,
     ATTR_LAST_UPDATE,
 )
 
@@ -114,7 +112,6 @@ class OpenKarotzCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                 "id": info.get("id", info.get("wlan_mac", "unknown")),
                 "version": info.get("version", "unknown"),
                 ATTR_LAST_UPDATE: datetime.now().isoformat(),
-                ATTR_CONNECTION_STATUS: connection_status,
                 ATTR_ERROR_MESSAGE: str(errors) if errors else None,
                 "info": info,
                 "state": state,
