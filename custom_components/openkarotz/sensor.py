@@ -7,11 +7,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.const import ATTR_DEVICE_ID
 
 from .api import OpenKarotzAPI
 from .coordinator import OpenKarotzCoordinator
-from .const import SENSOR_TYPES, ATTR_API_VERSION, ATTR_CONNECTION_STATUS, ATTR_ERROR_MESSAGE, DOMAIN
+from .const import SENSOR_TYPES, ATTR_ERROR_MESSAGE, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 

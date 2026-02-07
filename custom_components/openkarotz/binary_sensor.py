@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.const import ATTR_DEVICE_ID
 from .const import ATTR_CONNECTION_STATUS
 
 from .api import OpenKarotzAPI
