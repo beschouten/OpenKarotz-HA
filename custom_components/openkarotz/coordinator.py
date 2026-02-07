@@ -50,26 +50,20 @@ class OpenKarotzCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     async def _async_update_data(self) -> Dict[str, Any]:
         """Fetch data from OpenKarotz API."""
         try:
-            # Fetch all data in parallel
+            # Fetch only working data in parallel
             info_task = self.api.get_info()
             state_task = self.api.get_state()
             leds_task = self.api.get_leds()
             ears_task = self.api.get_ears()
-            rfid_task = self.api.get_rfid()
             tts_task = self.api.get_tts()
-            pictures_task = self.api.get_pictures()
-            sounds_task = self.api.get_sounds()
             apps_task = self.api.get_apps()
 
-            info, state, leds, ears, rfid, tts, pictures, sounds, apps = await asyncio.gather(
+            info, state, leds, ears, tts, apps = await asyncio.gather(
                 info_task,
                 state_task,
                 leds_task,
                 ears_task,
-                rfid_task,
                 tts_task,
-                pictures_task,
-                sounds_task,
                 apps_task,
                 return_exceptions=True,
             )
@@ -106,13 +100,11 @@ class OpenKarotzCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
             # Update state variables
             self._device_info = info
-            self._device_state = state
+            # Use info for state since get_state returns same data
+            self._device_state = info
             self._led_state = leds
             self._ears_state = ears
-            self._rfid_state = rfid
             self._tts_state = tts
-            self._pictures = pictures
-            self._sounds = sounds
             self._apps = apps
 
             # Check connection status
@@ -120,8 +112,8 @@ class OpenKarotzCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
             # Build response data
             data = {
-                ATTR_DEVICE_ID: info.get("id", "unknown"),
-                ATTR_API_VERSION: info.get("api_version", "unknown"),
+                "id": info.get("id", info.get("wlan_mac", "unknown")),
+                "version": info.get("version", "unknown"),
                 ATTR_LAST_UPDATE: datetime.now().isoformat(),
                 ATTR_CONNECTION_STATUS: connection_status,
                 ATTR_ERROR_MESSAGE: str(errors) if errors else None,
@@ -129,11 +121,8 @@ class OpenKarotzCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                 "state": state,
                 "leds": leds,
                 "ears": ears,
-                "rfid": rfid,
                 "tts": tts,
-                "pictures": pictures,
-                "sounds": sounds,
-                "apps": apps,
+                "moods": apps,
             }
 
             if errors:

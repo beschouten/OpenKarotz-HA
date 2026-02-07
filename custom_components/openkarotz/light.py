@@ -59,16 +59,19 @@ class OpenKarotzLight(CoordinatorEntity[OpenKarotzCoordinator], LightEntity):
         """Initialize light entity."""
         super().__init__(coordinator)
         self.led_data = led_data
-        led_id = led_data.get("id", 1)
-        self._attr_unique_id = f"{coordinator.data.get('info', {}).get('id', 'unknown') if coordinator.data else 'unknown'}_led_{led_id}"
-        self._attr_name = led_data.get("name", f"LED {led_id}")
+        self._led_id = led_data.get("id", 1)
+        self._led_name = led_data.get("name", f"LED {self._led_id}")
+        
+        device_id = coordinator.data.get('info', {}).get('id', 'unknown') if coordinator.data else 'unknown'
+        self._attr_unique_id = f"{device_id}_led_{self._led_id}"
+        self._attr_name = self._led_name
         self._attr_device_info = coordinator.device_info
 
     @property
     def is_on(self) -> bool:
         """Check if light is on."""
-        led_state = self.coordinator.leds_state or {}
-        return led_state.get("enabled", False)
+        led_state = self.coordinator.leds_state or {} if self.coordinator and self.coordinator.leds_state else {}
+        return led_state.get("enabled", False) if led_state else False
 
     @property
     def color_mode(self) -> str | None:
@@ -145,15 +148,14 @@ class OpenKarotzLight(CoordinatorEntity[OpenKarotzCoordinator], LightEntity):
             data["color_temperature"] = kwargs["color_temperature"]
 
         if data:
-            await self.coordinator.api.set_led(led_id=led_id, **data)
+            await self.coordinator.api.set_led(**data)
         else:
             # Just turn on without changing color
-            await self.coordinator.api.set_led(led_id=led_id, brightness=100)
+            await self.coordinator.api.set_led(brightness=100)
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off the light."""
-        led_id = self.led_data.get("id", 1)
-        await self.coordinator.api.set_led(led_id=led_id, brightness=0)
+        await self.coordinator.api.set_led(brightness=0)
 
     async def async_select_color(self, color_name: str) -> None:
         """Select a predefined color for the LED."""

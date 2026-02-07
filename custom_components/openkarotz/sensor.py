@@ -91,7 +91,10 @@ class OpenKarotzMemoryUsageSensor(OpenKarotzSensor):
     @property
     def native_value(self):
         """Return memory usage."""
-        return self.coordinator.data.get("state", {}).get("memory", {}).get("usage", 0) if self.coordinator.data else 0
+        if not self.coordinator.data:
+            return 0
+        # Karotz doesn't have memory usage in API, return 0
+        return 0
 
     @property
     def unit_of_measurement(self):
@@ -123,7 +126,10 @@ class OpenKarotzUptimeSensor(OpenKarotzSensor):
     @property
     def native_value(self):
         """Return device uptime in seconds."""
-        return self.coordinator.data.get("state", {}).get("uptime", 0) if self.coordinator.data else 0
+        if not self.coordinator.data:
+            return 0
+        # Karotz doesn't have uptime in API, return 0
+        return 0
 
     @property
     def unit_of_measurement(self):

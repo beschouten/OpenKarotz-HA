@@ -10,24 +10,17 @@ API_ENDPOINTS = {
       "GET_STATE": "/cgi-bin/status",
       "GET_LEDS": "/cgi-bin/leds",
       "GET_EARS": "/cgi-bin/ears",
-      "GET_RFID": "/cgi-bin/rfid",
       "GET_TTS": "/cgi-bin/tts",
-      "GET_PICTURES": "/cgi-bin/pictures",
-      "GET_SOUNDS": "/cgi-bin/sounds",
+
       "GET_APPS": "/cgi-bin/moods",
       "POST_LEDS": "/cgi-bin/leds",
       "POST_EARS": "/cgi-bin/ears",
       "POST_TTS": "/cgi-bin/tts",
-      "POST_PICTURES": "/cgi-bin/pictures",
-      "POST_SOUNDS": "/cgi-bin/sounds",
+
       "GET_VERSION": "/cgi-bin/get_version",
       "WAKEUP": "/cgi-bin/wakeup",
       "SLEEP": "/cgi-bin/sleep",
-      "RFID_START_RECORD": "/cgi-bin/rfid_start_record",
-      "RFID_STOP_RECORD": "/cgi-bin/rfid_stop_record",
-      "RFID_DELETE": "/cgi-bin/rfid_delete",
-      "RFID_UNASSIGN": "/cgi-bin/rfid_unassign",
-      "RFID_ASSIGN": "/cgi-bin/rfid_assign_url",
+
       "CLEAR_CACHE": "/cgi-bin/clear_cache",
       "CLEAR_SNAPSHOTS": "/cgi-bin/clear_snapshots",
       "TAKE_SNAPSHOT": "/cgi-bin/take_snapshot",
@@ -154,8 +147,6 @@ DEFAULT_RECONNECT_ATTEMPTS = 3
 DEFAULT_RECONNECT_DELAY = 5
 
 # Entity attributes
-ATTR_DEVICE_ID = "device_id"
 ATTR_LAST_UPDATE = "last_update"
-ATTR_API_VERSION = "api_version"
 ATTR_CONNECTION_STATUS = "connection_status"
 ATTR_ERROR_MESSAGE = "error_message"
