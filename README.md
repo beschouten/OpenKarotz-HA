@@ -1,8 +1,17 @@
 """OpenKarotz README and documentation."""
 
-# OpenKarotz Home Assistant Integration
+# OpenKarotz Home Assistant Integration v2.2.2
 
 A Home Assistant integration for OpenKarotz devices, enabling control and monitoring of working features through the Home Assistant Community Store (HACS).
+
+## Changelog v2.2.2
+
+- Fixed config_flow version mismatch (v1 to v2)
+- Fixed services data structure access
+- Added config_entry_id to service schemas
+- Updated coordinator async API calls
+- Removed unused API_BASE_URL constant
+- Improved migration logic
 
 ## Features
 

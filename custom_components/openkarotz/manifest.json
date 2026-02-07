@@ -1,7 +1,7 @@
 {
   "domain": "openkarotz",
   "name": "OpenKarotz",
-  "version": "2.0.2",
+  "version": "2.2.2",
   "issue_tracker": "https://github.com/beschouten/OpenKarotzHomeAssistant/issues",
   "description": "A comprehensive Home Assistant integration for OpenKarotz devices",
   "codeowners": [
