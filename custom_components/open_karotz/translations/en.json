@@ -13,11 +13,11 @@
     "invalid_host": "Invalid host",
     "unknown": "Unknown error"
   },
-  "entities": {
-    "sensor": {
-      "karotz_storage": {"name": "Karotz Storage"},
-      "usb_storage": {"name": "USB Storage"}
-    },
+"entities": {
+      "sensor": {
+        "karotz_storage": {"name": "Karotz Storage", "unit_of_measurement": "%"},
+        "usb_storage": {"name": "USB Storage", "unit_of_measurement": "%"}
+      },
     "light": {
       "led": {"name": "Open Karotz LED"}
     },

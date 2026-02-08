@@ -70,6 +70,7 @@ class OpenKarotzCoordinator(DataUpdateCoordinator):
 class KarotzStorageSensor(CoordinatorEntity, SensorEntity):
     """Representation of the Karotz storage sensor."""
 
+    _attr_translation_key = "karotz_storage"
     _attr_native_unit_of_measurement = PERCENTAGE
 
     def __init__(self, coordinator: OpenKarotzCoordinator, entry: ConfigEntry) -> None:
@@ -94,6 +95,7 @@ class KarotzStorageSensor(CoordinatorEntity, SensorEntity):
 class UsbStorageSensor(CoordinatorEntity, SensorEntity):
     """Representation of the USB storage sensor."""
 
+    _attr_translation_key = "usb_storage"
     _attr_native_unit_of_measurement = PERCENTAGE
 
     def __init__(self, coordinator: OpenKarotzCoordinator, entry: ConfigEntry) -> None:
