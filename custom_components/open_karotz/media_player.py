@@ -4,10 +4,10 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.media_player import (
-    MEDIA_TYPE_MUSIC,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
+    MediaType,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
@@ -33,7 +33,7 @@ class OpenKarotzMediaPlayer(MediaPlayerEntity):
     """Representation of the Open Karotz media player."""
 
     _attr_name = "Open Karotz"
-    _attr_media_content_type = MEDIA_TYPE_MUSIC
+    _attr_media_content_type = MediaType.MUSIC
     _attr_supported_features = (
         MediaPlayerEntityFeature.PLAY_MEDIA
         | MediaPlayerEntityFeature.PLAY
@@ -142,7 +142,7 @@ class OpenKarotzMediaPlayer(MediaPlayerEntity):
         self, media_type: str | None, media_id: str | None, **kwargs
     ) -> None:
         """Play media."""
-        if media_type == MEDIA_TYPE_MUSIC and media_id:
+        if media_type == MediaType.MUSIC and media_id:
             if media_id in SOUND_LIST:
                 await self._async_play_local(media_id)
                 self._title = f"Sound {media_id}"

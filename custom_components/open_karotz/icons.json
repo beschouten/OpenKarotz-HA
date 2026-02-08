@@ -1,0 +1,52 @@
+{
+  "entity": {
+    "sensor": {
+      "karotz_storage": {
+        "default": "mdi:memory"
+      },
+      "usb_storage": {
+        "default": "mdi:usb"
+      }
+    },
+    "light": {
+      "led": {
+        "default": "mdi:lightbulb"
+      }
+    },
+    "cover": {
+      "ears": {
+        "default": "mdi:arrow-up-down-bold"
+      }
+    },
+    "media_player": {
+      "media_player": {
+        "default": "mdi:speaker"
+      }
+    },
+    "select": {
+      "mood": {
+        "default": "mdi:emoticon"
+      }
+    },
+    "camera": {
+      "camera": {
+        "default": "mdi:camera"
+      }
+    },
+    "switch": {
+      "sleep": {
+        "default": "mdi:power-sleep"
+      }
+    },
+    "binary_sensor": {
+      "rfid": {
+        "default": "mdi:nfc"
+      }
+    },
+    "button": {
+      "clear_cache": {
+        "default": "mdi:trash-can"
+      }
+    }
+  }
+}
