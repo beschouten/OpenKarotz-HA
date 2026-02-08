@@ -1,0 +1,14 @@
+{
+  "domain": "open_karotz",
+  "name": "Open Karotz",
+  "codeowners": ["@openkarotz"],
+  "config_flow": true,
+  "documentation": "https://github.com/openkarotz/OpenKarotz-HA",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "version": "1.0.0",
+  "requirements": [],
+  "dependencies": [],
+  "homeassistant": "2024.1.0",
+  "loggers": ["custom_components.open_karotz"]
+}

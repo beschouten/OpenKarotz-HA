@@ -1,0 +1,1 @@
+"""Test init for Open Karotz integration."""

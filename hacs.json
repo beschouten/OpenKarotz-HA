@@ -1,0 +1,35 @@
+name: Open Karotz
+
+integration_type: device
+
+integration_title: Open Karotz
+
+domain: open_karotz
+
+version: "1.0.0"
+
+codeowners:
+  - "@openkarotz"
+
+config_flow: true
+
+iot_class: local_polling
+
+requirements: []
+
+dependencies: []
+
+documentation: https://github.com/openkarotz/OpenKarotz-HA
+
+issue_tracker: https://github.com/openkarotz/OpenKarotz-HA/issues
+
+homeassistant: "2024.1.0"
+
+excluded_from_recording:
+  - sensor.karotz_storage
+  - sensor.usb_storage
+  - binary_sensor.open_karotz_rfid
+
+# Optional manifest fields
+loggers:
+  - custom_components.open_karotz

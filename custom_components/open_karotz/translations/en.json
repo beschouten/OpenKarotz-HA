@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "host": "Host",
+          "name": "Name"
+        }
+      }
+    }
+  },
+  "error": {
+    "invalid_host": "Invalid host",
+    "unknown": "Unknown error"
+  },
+  "entities": {
+    "sensor": {
+      "karotz_storage": {"name": "Karotz Storage"},
+      "usb_storage": {"name": "USB Storage"}
+    },
+    "light": {
+      "led": {"name": "Open Karotz LED"}
+    },
+    "cover": {
+      "ears": {"name": "Open Karotz Ears"}
+    },
+    "media_player": {
+      "media_player": {"name": "Open Karotz"}
+    },
+    "select": {
+      "mood": {"name": "Open Karotz Mood"}
+    },
+    "camera": {
+      "camera": {"name": "Open Karotz Camera"}
+    },
+    "switch": {
+      "sleep": {"name": "Open Karotz Sleep"}
+    },
+    "binary_sensor": {
+      "rfid": {"name": "Open Karotz RFID"}
+    },
+    "button": {
+      "clear_cache": {"name": "Clear Cache"}
+    }
+  }
+}

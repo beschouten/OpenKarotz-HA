@@ -1,0 +1,88 @@
+# Open Karotz Home Assistant Integration
+
+Custom integration for Open Karotz devices.
+
+## Features
+
+- **Storage Sensors**: Monitor Karotz and USB storage usage
+- **LED Control**: RGB LED control (8 colors + off)
+- **Ear Control**: Position control (0-100%), reset, random
+- **Media Player**: Local sound playback
+- **TTS Service**: Multi-language text-to-speech (88 voices)
+- **Mood Control**: 301 French mood sounds
+- **Camera**: Snapshot capture
+- **System Controls**: Sleep/wake switch, clear cache button
+- **RFID**: RFID tag detection
+
+## Installation
+
+### Using HACS
+1. Install [HACS](https://hacs.xyz/)
+2. Go to HACS → Integrations
+3. Click "+" and add repository: `https://github.com/openkarotz/OpenKarotz-HA`
+4. Search for "Open Karotz" and click "Download"
+5. Restart Home Assistant
+6. Go to Settings → Devices & Services → Add Integration
+
+### Manual Installation
+1. Copy `custom_components/open_karotz` to `config/custom_components`
+2. Restart Home Assistant
+3. Go to Settings → Devices & Services → Add Integration
+
+## Configuration
+1. Go to Settings → Devices & Services
+2. Click "Add Integration"
+3. Search for "Open Karotz"
+4. Enter device IP address
+5. Enter device name
+6. Click "Submit"
+
+## Usage Examples
+
+### TTS Service
+```yaml
+action:
+  service: open_karotz.tts
+  data:
+    text: "Hello World"
+    voice: "6"  # English Female
+```
+
+### LED Control
+```yaml
+service: light.turn_on
+data:
+  rgb_color: [255, 0, 0]  # Red
+target:
+  entity_id: light.open_karotz_led
+```
+
+### Ear Control
+```yaml
+service: cover.set_cover_position
+data:
+  position: 50  # 50% up
+target:
+  entity_id: cover.open_karotz_ears
+```
+
+## Documentation
+
+- [README](README.md) - Full documentation
+- [Troubleshooting](TROUBLESHOOTING.md) - Troubleshooting guide
+- [Configuration Examples](CONFIGURATION_EXAMPLES.md) - 10+ automation examples
+
+## Testing
+
+```bash
+pytest tests
+```
+
+## License
+
+MIT License
+
+## Credits
+
+- [Open Karotz](https://openkarotz.org/)
+- [Home Assistant](https://www.home-assistant.io/)
