@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.cover import CoverDeviceClass, CoverEntity, CoverEntityFeature
+from homeassistant.components.cover import CoverEntity, CoverEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
@@ -27,7 +27,6 @@ async def async_setup_entry(
 class OpenKarotzEars(CoverEntity):
     """Representation of the Open Karotz ears."""
 
-    _attr_device_class = CoverDeviceClass.WINDOW
     _attr_name = "Open Karotz Ears"
     _attr_supported_features = (
         CoverEntityFeature.OPEN

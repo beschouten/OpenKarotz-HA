@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, PERCENTAGE
 from homeassistant.core import HomeAssistant
@@ -70,7 +70,6 @@ class OpenKarotzCoordinator(DataUpdateCoordinator):
 class KarotzStorageSensor(CoordinatorEntity, SensorEntity):
     """Representation of the Karotz storage sensor."""
 
-    _attr_device_class = SensorDeviceClass.BATTERY
     _attr_native_unit_of_measurement = PERCENTAGE
 
     def __init__(self, coordinator: OpenKarotzCoordinator, entry: ConfigEntry) -> None:
@@ -95,7 +94,6 @@ class KarotzStorageSensor(CoordinatorEntity, SensorEntity):
 class UsbStorageSensor(CoordinatorEntity, SensorEntity):
     """Representation of the USB storage sensor."""
 
-    _attr_device_class = SensorDeviceClass.BATTERY
     _attr_native_unit_of_measurement = PERCENTAGE
 
     def __init__(self, coordinator: OpenKarotzCoordinator, entry: ConfigEntry) -> None:

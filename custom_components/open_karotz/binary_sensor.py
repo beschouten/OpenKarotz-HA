@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
@@ -28,7 +28,7 @@ class OpenKarotzRfidSensor(BinarySensorEntity):
     """Representation of the Open Karotz RFID sensor."""
 
     _attr_name = "Open Karotz RFID"
-    _attr_device_class = "presence"
+    _attr_device_class = BinarySensorDeviceClass.PRESENCE
     _attr_translation_key = "rfid"
 
     def __init__(self, host: str, entry_id: str) -> None:
