@@ -16,11 +16,11 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_HOST, default="192.168.1.70"): str,
-        vol.Required(CONF_NAME, default="Open Karotz"): str,
-    }
-)
+     {
+         vol.Required(CONF_HOST, default="192.168.1.70", description="Open Karotz device IP address"): str,
+         vol.Required(CONF_NAME, default="Open Karotz"): str,
+     }
+ )
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
