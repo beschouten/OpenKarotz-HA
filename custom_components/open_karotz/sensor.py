@@ -51,20 +51,26 @@ class OpenKarotzCoordinator(DataUpdateCoordinator):
         )
         self.host = host
 
-    async def _async_update_data(self):
-        """Fetch data from Open Karotz."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+async def _async_update_data(self):
+         """Fetch data from Open Karotz."""
+         from homeassistant.helpers.aiohttp_client import async_get_clientsession
+         import json
 
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self.host}/cgi-bin/get_free_space") as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                _LOGGER.error("Failed to fetch free space: %s", resp.status)
-                return None
-        except Exception as err:
-            _LOGGER.error("Error fetching data: %s", err)
-            return None
+         session = async_get_clientsession(self.hass)
+         try:
+             async with session.get(f"http://{self.host}/cgi-bin/get_free_space") as resp:
+                 if resp.status == 200:
+                     text = await resp.text()
+                     try:
+                         return json.loads(text)
+                     except json.JSONDecodeError:
+                         _LOGGER.error("Failed to parse JSON from get_free_space: %s", text)
+                         return None
+                 _LOGGER.error("Failed to fetch free space: %s", resp.status)
+                 return None
+         except Exception as err:
+             _LOGGER.error("Error fetching data: %s", err)
+             return None
 
 
 class KarotzStorageSensor(CoordinatorEntity, SensorEntity):

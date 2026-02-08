@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
+from homeassistant.components.camera import Camera
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
@@ -28,7 +28,6 @@ class OpenKarotzCamera(Camera):
     """Representation of the Open Karotz camera."""
 
     _attr_name = "Open Karotz Camera"
-    _attr_supported_features = CameraEntityFeature.STREAM
     _attr_translation_key = "camera"
 
     def __init__(self, host: str, entry_id: str) -> None:
@@ -41,12 +40,23 @@ class OpenKarotzCamera(Camera):
     async def _async_capture_snapshot(self) -> bytes | None:
         """Capture a snapshot from Open Karotz."""
         from homeassistant.helpers.aiohttp_client import async_get_clientsession
+        import json
 
         session = async_get_clientsession(self.hass)
         try:
             async with session.get(f"http://{self._host}/cgi-bin/snapshot?silent=1") as resp:
                 if resp.status == 200:
-                    return await resp.read()
+                    content_type = resp.headers.get("content-type", "")
+                    if "image" in content_type:
+                        return await resp.read()
+                    text = await resp.text()
+                    try:
+                        json_data = json.loads(text)
+                        _LOGGER.error("Snapshot API returned JSON instead of image: %s", json_data)
+                        return None
+                    except json.JSONDecodeError:
+                        _LOGGER.error("Snapshot API returned non-image content: %s", text[:100])
+                        return None
                 _LOGGER.error("Failed to capture snapshot: %s", resp.status)
                 return None
         except Exception as err:
