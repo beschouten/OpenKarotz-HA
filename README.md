@@ -3,8 +3,9 @@
 Custom Home Assistant integration for Open Karotz devices.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1.0+-orange.svg)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.12+-orange.svg)](https://www.home-assistant.io/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![Version](https://img.shields.io/badge/version-1.3.0-green.svg)](https://github.com/openkarotz/OpenKarotz-HA/releases/tag/v1.3.0)
 
 ## Features
 
@@ -14,7 +15,7 @@ Custom Home Assistant integration for Open Karotz devices.
 | LED Control | ✅ | RGB LED (8 colors + off) |
 | Ear Control | ✅ | Position, reset, random |
 | Sound Player | ✅ | Local sounds (14 predefined) |
-| TTS | ✅ | 88 voices, 30+ languages |
+| TTS | ✅ | Service action + media_player |
 | Mood Control | ✅ | 301 French moods |
 | Camera | ✅ | Snapshot capture |
 | System | ✅ | Sleep/wake, clear cache |
@@ -41,17 +42,34 @@ Custom Home Assistant integration for Open Karotz devices.
 
 ## Configuration
 
-### Configuration Flow (Recommended)
+### Configuration Flow (Recommended - EASIEST)
 
 1. Go to **Settings** → **Devices & Services**
 2. Click **"Add Integration"**
 3. Search for **"Open Karotz"**
 4. Enter your device information:
-   - **Host**: IP address (default: 192.168.1.70)
+   - **Host (IP address)**: Your Open Karotz device IP (default: 192.168.1.70)
    - **Name**: Display name
 5. Click **"Submit"**
 
-### YAML Configuration
+**Finding Your Open Karotz IP Address:**
+- Check your router's DHCP client list
+- Open Karotz web interface shows IP on screen
+- Use network scanning tools like `nmap` or [Advanced IP Scanner](https://advanced-ip-scanner.com/)
+
+### Manual IP Configuration
+
+To find your Open Karotz device IP:
+
+```bash
+# Using nmap (Linux/macOS/Windows with WSL)
+nmap -sn 192.168.1.0/24 | grep -B2 -A2 "karotz"
+
+# Or ping the default IP
+ping 192.168.1.70
+```
+
+### YAML Configuration (Alternative)
 
 ```yaml
 # configuration.yaml
@@ -89,12 +107,13 @@ open_karotz:
 
 | Entity | Description |
 |--------|-------------|
-| `media_player.open_karotz` | Sound playback |
+| `media_player.open_karotz` | Sound playback + **TTS** |
 
 **Features**:
 - Local sound playback (14 predefined sounds)
 - Network sound playback (URL)
 - Volume control
+- **Text-to-Speech via service action**
 
 ### Selects
 
@@ -134,28 +153,109 @@ open_karotz:
 |--------|-------------|
 | `button.open_karotz_clear_cache` | Clear system cache |
 
-## Services
+## 📢 Text-to-Speech (TTS) - How to Use
 
-### TTS Service
+Open Karotz TTS is accessible through **two methods**:
 
-Play text-to-speech on your Open Karotz device.
+### Method 1: Service Action (Easiest)
 
-**Service**: `open_karotz.tts`
+This is the recommended way to use TTS:
 
-**Data**:
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| `text` | Yes | string | Text to speak |
-| `voice` | No | string | Voice ID (1-88) |
-
-**Example**:
 ```yaml
+# In automations, scripts, or service calls
 action:
   service: open_karotz.tts
   data:
     text: "Hello World"
     voice: "6"  # English Female
 ```
+
+### Method 2: Media Player
+
+TTS is also available through the media player entity:
+
+1. Use `media_player.play_media` service
+2. Set `media_content_type` to "music"
+3. Set `media_content_id` to your text
+4. The text will be spoken using the default voice
+
+### Voice Selection
+
+Choose from 88 voices across 30+ languages:
+
+| Voice ID | Language | Gender |
+|----------|----------|--------|
+| 1 | French | Male |
+| 6 | English (US) | Female |
+| 7 | English (UK) | Male |
+| 13 | Spanish | Male |
+| 25 | Brazilian Portuguese | Male |
+
+### Full TTS Examples
+
+**Basic TTS**:
+```yaml
+action:
+  service: open_karotz.tts
+  data:
+    text: "Welcome home!"
+```
+
+**With Voice Selection**:
+```yaml
+action:
+  service: open_karotz.tts
+  data:
+    text: "Bonjour!"
+    voice: "1"  # French Male
+```
+
+**In an Automation**:
+```yaml
+automation:
+  - alias: "Doorbell TTS"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.doorbell
+        to: 'on'
+    action:
+      - service: open_karotz.tts
+        data:
+          text: "Someone is at the door"
+          voice: "6"
+      - service: light.toggle
+        target:
+          entity_id: light.open_karotz_led
+```
+
+**Using Home Assistant GUI**:
+1. Go to **Settings** → **Automations & Scenes**
+2. Create a new automation
+3. Add action: **"Call Service"**
+4. Service: `open_karotz.tts`
+5. Fill in `text` and optional `voice`
+
+### TTS Voice IDs (Complete List)
+
+| ID | Language | Gender |
+|----|----------|--------|
+| 1-86 | 30+ languages | Male/Female |
+
+Commonly used:
+- **6**: English (US) Female (default)
+- **7**: English (UK) Male
+- **1**: French Male
+- **2**: French Female
+
+### Troubleshooting TTS
+
+If TTS doesn't work:
+
+1. **Verify voice ID**: 1-88 (use `6` for English)
+2. **Check network**: `ping 192.168.1.70`
+3. **Test on device**: Try TTS via Open Karotz web interface
+4. **Text length**: Keep under 200 characters
+5. **URL encoding**: Special characters are automatically encoded
 
 ## Configuration Examples
 
@@ -234,9 +334,13 @@ automation:
 
 ### TTS Not Working
 
-1. Verify voice ID (1-88)
-2. Test with different text lengths
-3. Check Open Karotz web interface for TTS
+See full **[TTS Troubleshooting](#troubleshooting-tts)** section above.
+
+Common fixes:
+1. Verify voice ID (1-88, default: 6)
+2. Test with short text (200 chars max)
+3. Check device is online: `ping 192.168.1.70`
+4. Test via Open Karotz web interface
 
 ### RFID Not Detected
 
@@ -246,7 +350,7 @@ automation:
 
 ## API Documentation
 
-For complete API documentation, see the [API Documentation](plans/open_karotz_api_documentation.md).
+For complete API documentation, see the [API Documentation](custom_components/open_karotz/api.py) or [API Plan](plans/open_karotz_api_documentation.md).
 
 ## Testing
 
@@ -277,7 +381,7 @@ custom_components/open_karotz/
 ├── light.py             # LED control
 ├── cover.py             # Ear control
 ├── media_player.py      # Sound playback
-├── tts.py               # TTS service
+| **TTS via service action**
 ├── select.py            # Mood control
 ├── camera.py            # Snapshot capture
 ├── switch.py            # Sleep/wake
@@ -327,6 +431,16 @@ tests/
 ## License
 
 This project is licensed under the MIT License.
+
+## 📢 TTS Troubleshooting
+
+If TTS doesn't work:
+
+1. **Verify voice ID**: 1-88 (default: 6 for English)
+2. **Check network**: `ping 192.168.1.70`
+3. **Test text length**: Keep under 200 characters
+4. **Web interface test**: Try TTS via Open Karotz web interface
+5. **Check logs**: Look for error messages in Home Assistant logs
 
 ## Acknowledgments
 
