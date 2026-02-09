@@ -8,6 +8,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
+from .api import OpenKarotzAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,13 +22,18 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.TTS,
 ]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Open Karotz from a config entry."""
+    host = entry.data["host"]
+    websession = None
+
+    api = OpenKarotzAPI(host)
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = entry.data
+    hass.data[DOMAIN][entry.entry_id] = api
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

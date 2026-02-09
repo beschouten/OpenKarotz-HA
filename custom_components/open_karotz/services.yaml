@@ -1,0 +1,31 @@
+tts:
+  name: TTS
+  description: Speak text on Open Karotz
+  fields:
+    message:
+      required: true
+      example: "Hello World"
+      selector:
+        text:
+    voice:
+      required: false
+      default: "6"
+      selector:
+        select:
+          options:
+            - value: "1"
+              label: "French Male"
+            - value: "2"
+              label: "French Female"
+            - value: "3"
+              label: "Canadian French Male"
+            - value: "4"
+              label: "Canadian French Female"
+            - value: "5"
+              label: "English (US) Male"
+            - value: "6"
+              label: "English (US) Female"
+            - value: "7"
+              label: "English (UK) Male"
+            - value: "8"
+              label: "English (UK) Female"
