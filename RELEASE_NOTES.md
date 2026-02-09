@@ -1,19 +1,23 @@
-# Release Notes - v1.3.9
+# Release Notes - v1.4.0
 
 ## Overview
-Release of the Open Karotz Home Assistant integration with TTS service fix.
+Release of the Open Karotz Home Assistant integration with test fixes and documentation updates.
 
 ## Fixes
 
-### TTS Service Error
-- Fixed `'NoneType' object has no attribute 'data'` error in TTS service action
-- Root cause: `entry.runtime_data` was never set in `async_setup_entry()`
-- Fix: Added `entry.runtime_data = api` to properly store the API instance in the config entry
+### Test Failures
+- Fixed test fixtures and mock configurations
+- Updated integration tests to work with current API structure
+
+### Documentation
+- Updated README with latest feature list
+- Fixed code examples and configuration instructions
 
 ## Changes
 
 ### Core Components
-- **TTS Service**: Fixed service handler to properly retrieve API instance from `entry.runtime_data`
+- Improved TTS service error handling
+- Enhanced API response validation
 
 ## Features
 
@@ -87,6 +91,9 @@ None
 - `/cgi-bin/wake_up` returns 404 (device-specific)
 - `/cgi-bin/radio_list` returns 404
 - Some operations may timeout (increase timeout if needed)
+
+## Migration from v1.3.x
+No breaking changes. Simply update the integration through HACS or manual installation.
 
 ## Future Improvements
 - Add more audio file formats
