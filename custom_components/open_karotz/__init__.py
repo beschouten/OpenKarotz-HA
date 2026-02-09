@@ -6,6 +6,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
 from .api import OpenKarotzAPI
@@ -28,7 +29,6 @@ PLATFORMS: list[Platform] = [
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Open Karotz from a config entry."""
     host = entry.data["host"]
-    websession = None
 
     api = OpenKarotzAPI(host)
     hass.data.setdefault(DOMAIN, {})
@@ -37,6 +37,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(async_update_options))
+
+    return True
+
+
+async def async_setup(hass: HomeAssistant) -> bool:
+    """Set up the Open Karotz integration."""
+    from homeassistant.helpers.service import async_register_admin_service
+
+    async def async_open_karotz_tts_service(service_call):
+        """Handle TTS service call."""
+        text = service_call.data.get("text", "")
+        voice = service_call.data.get("voice", "6")
+
+        if not text:
+            raise HomeAssistantError("Text is required")
+
+        # Find all loaded Open Karotz instances
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            raise HomeAssistantError("No Open Karotz devices configured")
+
+        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
+        if api is None:
+            api = hass.data[DOMAIN].get(entries[0].entry_id)
+
+        if not api:
+            raise HomeAssistantError("Open Karotz not initialized")
+
+        try:
+            import urllib.parse
+            encoded_text = urllib.parse.quote(text)
+            await api.play_tts(encoded_text, voice)
+        except Exception as err:
+            raise HomeAssistantError(f"Failed to play TTS: {err}")
+
+    async_register_admin_service(
+        hass, DOMAIN, "tts", async_open_karotz_tts_service
+    )
 
     return True
 
