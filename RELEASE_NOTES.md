@@ -1,7 +1,19 @@
-# Release Notes - v1.0.0
+# Release Notes - v1.3.9
 
 ## Overview
-Initial release of the Open Karotz Home Assistant integration.
+Release of the Open Karotz Home Assistant integration with TTS service fix.
+
+## Fixes
+
+### TTS Service Error
+- Fixed `'NoneType' object has no attribute 'data'` error in TTS service action
+- Root cause: `entry.runtime_data` was never set in `async_setup_entry()`
+- Fix: Added `entry.runtime_data = api` to properly store the API instance in the config entry
+
+## Changes
+
+### Core Components
+- **TTS Service**: Fixed service handler to properly retrieve API instance from `entry.runtime_data`
 
 ## Features
 
