@@ -38,26 +38,26 @@ class OpenKarotzRfidSensor(BinarySensorEntity):
         self._is_on = False
         self._tag_id = None
 
-async def _async_get_rfid_list(self) -> dict | None:
-    """Get RFID list from Open Karotz."""
-    from homeassistant.helpers.aiohttp_client import async_get_clientsession
-    import json
+    async def _async_get_rfid_list(self) -> dict | None:
+        """Get RFID list from Open Karotz."""
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+        import json
 
-    session = async_get_clientsession(self.hass)
-    try:
-        async with session.get(f"http://{self._host}/cgi-bin/rfid_list") as resp:
-            if resp.status == 200:
-                text = await resp.text()
-                try:
-                    return json.loads(text)
-                except json.JSONDecodeError:
-                    _LOGGER.error("Failed to parse JSON from rfid_list: %s", text)
-                    return {"rfids": []}
-            _LOGGER.error("Failed to get RFID list: %s", resp.status)
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.get(f"http://{self._host}/cgi-bin/rfid_list") as resp:
+                if resp.status == 200:
+                    text = await resp.text()
+                    try:
+                        return json.loads(text)
+                    except json.JSONDecodeError:
+                        _LOGGER.error("Failed to parse JSON from rfid_list: %s", text)
+                        return {"rfids": []}
+                _LOGGER.error("Failed to get RFID list: %s", resp.status)
+                return None
+        except Exception as err:
+            _LOGGER.error("Error getting RFID list: %s", err)
             return None
-    except Exception as err:
-        _LOGGER.error("Error getting RFID list: %s", err)
-        return None
 
     @property
     def is_on(self) -> bool:
