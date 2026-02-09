@@ -279,7 +279,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_tts_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "play_sound":
                 async_register_admin_service(
@@ -287,7 +287,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_play_sound_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "set_volume":
                 async_register_admin_service(
@@ -295,7 +295,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_volume_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "set_led_color":
                 async_register_admin_service(
@@ -303,7 +303,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_led_color_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "set_ear_position":
                 async_register_admin_service(
@@ -311,7 +311,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_ear_position_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "set_mood":
                 async_register_admin_service(
@@ -319,7 +319,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_mood_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "wake_up":
                 async_register_admin_service(
@@ -327,7 +327,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_wake_up_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "sleep":
                 async_register_admin_service(
@@ -335,7 +335,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_sleep_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
             elif service_name == "clear_cache":
                 async_register_admin_service(
@@ -343,7 +343,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_clear_cache_service,
-                    schema=service_schema,
+                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
                 )
 
     return True
