@@ -5,7 +5,7 @@ Custom Home Assistant integration for Open Karotz devices.
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.12+-orange.svg)](https://www.home-assistant.io/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-1.3.0-green.svg)](https://github.com/openkarotz/OpenKarotz-HA/releases/tag/v1.3.0)
+[![Version](https://img.shields.io/badge/version-1.3.2-green.svg)](https://github.com/openkarotz/OpenKarotz-HA/releases/tag/v1.3.2)
 
 ## Features
 
