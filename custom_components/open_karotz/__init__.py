@@ -266,9 +266,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 required = field_config.get("required", False)
                 # Use the field name as the schema key
                 if required:
-                    schema[vol.Required(field_name)] = vol.Any(str, int, float, list, dict, None)
+                    schema[vol.Required(field_name)] = str
                 else:
-                    schema[vol.Optional(field_name, default=None)] = vol.Any(str, int, float, list, dict, None)
+                    schema[vol.Optional(field_name)] = str
             
             # Create voluptuous schema
             service_schema = vol.Schema(schema)
