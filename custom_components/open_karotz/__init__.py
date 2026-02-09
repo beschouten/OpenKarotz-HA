@@ -37,6 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api = OpenKarotzAPI(host)
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = api
+    entry.runtime_data = api
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -73,10 +74,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if not entries:
             raise HomeAssistantError("No Open Karotz devices configured")
 
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
+        api = entries[0].runtime_data
         if not api:
             raise HomeAssistantError("Open Karotz not initialized")
 
