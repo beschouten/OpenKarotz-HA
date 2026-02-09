@@ -1,6 +1,7 @@
 """Open Karotz Home Assistant Integration."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import yaml
 
@@ -9,6 +10,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.service import async_register_admin_service
+import voluptuous as vol
 
 from .const import DOMAIN
 from .api import OpenKarotzAPI
@@ -45,11 +47,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Open Karotz integration."""
-    # Load services.yaml
+    # Load services.yaml using async executor to avoid blocking
     services_path = hass.config.path("custom_components/open_karotz/services.yaml")
     try:
-        with open(services_path, "r", encoding="utf-8") as f:
-            services_config = yaml.safe_load(f)
+        services_config = await hass.async_add_executor_job(
+            lambda: yaml.safe_load(open(services_path, "r", encoding="utf-8"))
+        )
     except FileNotFoundError:
         _LOGGER.error("services.yaml not found at %s", services_path)
         return False
@@ -256,13 +259,27 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     # Register all services with schemas from services.yaml
     if services_config:
         for service_name, service_config in services_config.items():
+            # Build voluptuous schema from fields
+            fields = service_config.get("fields", {})
+            schema = {}
+            for field_name, field_config in fields.items():
+                required = field_config.get("required", False)
+                # Use the field name as the schema key
+                if required:
+                    schema[vol.Required(field_name)] = object
+                else:
+                    schema[vol.Optional(field_name, default=None)] = object
+            
+            # Create voluptuous schema
+            service_schema = vol.Schema(schema)
+            
             if service_name == "tts":
                 async_register_admin_service(
                     hass,
                     DOMAIN,
                     service_name,
                     async_open_karotz_tts_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "play_sound":
                 async_register_admin_service(
@@ -270,7 +287,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_play_sound_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "set_volume":
                 async_register_admin_service(
@@ -278,7 +295,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_volume_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "set_led_color":
                 async_register_admin_service(
@@ -286,7 +303,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_led_color_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "set_ear_position":
                 async_register_admin_service(
@@ -294,7 +311,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_ear_position_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "set_mood":
                 async_register_admin_service(
@@ -302,7 +319,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_set_mood_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "wake_up":
                 async_register_admin_service(
@@ -310,7 +327,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_wake_up_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "sleep":
                 async_register_admin_service(
@@ -318,7 +335,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_sleep_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
             elif service_name == "clear_cache":
                 async_register_admin_service(
@@ -326,7 +343,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     DOMAIN,
                     service_name,
                     async_open_karotz_clear_cache_service,
-                    schema=service_config.get("fields", {}),
+                    schema=service_schema,
                 )
 
     return True
