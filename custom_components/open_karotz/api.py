@@ -195,4 +195,16 @@ class OpenKarotzAPI:
             _LOGGER.error("Error clearing cache: %s", err)
             return False
 
-    async def get_rfid_list(self) -
+    async def get_rfid_list(self) -> dict | None:
+        """Get RFID list."""
+        return await self._async_get("/cgi-bin/rfid_list")
+
+    async def stop(self) -> bool:
+        """Stop playback."""
+        session = self._websession or async_get_clientsession(None)
+        try:
+            async with session.get(f"http://{self._host}/cgi-bin/stop") as resp:
+                return resp.status == 200
+        except Exception as err:
+            _LOGGER.error("Error stopping: %s", err)
+            return False
