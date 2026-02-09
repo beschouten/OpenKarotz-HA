@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_setup(hass: HomeAssistant) -> bool:
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Open Karotz integration."""
     from homeassistant.helpers.service import async_register_admin_service
 
@@ -53,7 +53,6 @@ async def async_setup(hass: HomeAssistant) -> bool:
         if not text:
             raise HomeAssistantError("Text is required")
 
-        # Find all loaded Open Karotz instances
         entries = hass.config_entries.async_entries(DOMAIN)
         if not entries:
             raise HomeAssistantError("No Open Karotz devices configured")
