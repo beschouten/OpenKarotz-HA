@@ -42,5 +42,83 @@
     "button": {
       "clear_cache": {"name": "Clear Cache"}
     }
+  },
+  "services": {
+    "tts": {
+      "name": "Text-to-Speech",
+      "description": "Play text-to-speech on Open Karotz",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "Text to speak"
+        },
+        "voice": {
+          "name": "Voice",
+          "description": "Voice ID (1-86)"
+        }
+      }
+    },
+    "play_sound": {
+      "name": "Play Sound",
+      "description": "Play a local sound from the library",
+      "fields": {
+        "sound_id": {
+          "name": "Sound ID",
+          "description": "Sound to play from the library"
+        }
+      }
+    },
+    "set_volume": {
+      "name": "Set Volume",
+      "description": "Set the volume level for media playback",
+      "fields": {
+        "volume": {
+          "name": "Volume",
+          "description": "Volume level (0.0 to 1.0)"
+        }
+      }
+    },
+    "set_led_color": {
+      "name": "Set LED Color",
+      "description": "Set the LED color",
+      "fields": {
+        "rgb_color": {
+          "name": "RGB Color",
+          "description": "RGB color values (0-255 for each channel)"
+        }
+      }
+    },
+    "set_ear_position": {
+      "name": "Set Ear Position",
+      "description": "Set the ear position",
+      "fields": {
+        "position": {
+          "name": "Position",
+          "description": "Position percentage (0-100)"
+        }
+      }
+    },
+    "set_mood": {
+      "name": "Set Mood",
+      "description": "Set the mood",
+      "fields": {
+        "mood_id": {
+          "name": "Mood ID",
+          "description": "Mood ID (1-301)"
+        }
+      }
+    },
+    "wake_up": {
+      "name": "Wake Up",
+      "description": "Wake up Open Karotz from sleep mode"
+    },
+    "sleep": {
+      "name": "Sleep",
+      "description": "Put Open Karotz to sleep mode"
+    },
+    "clear_cache": {
+      "name": "Clear Cache",
+      "description": "Clear the Open Karotz cache"
+    }
   }
 }

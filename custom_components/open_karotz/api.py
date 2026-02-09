@@ -208,3 +208,31 @@ class OpenKarotzAPI:
         except Exception as err:
             _LOGGER.error("Error stopping: %s", err)
             return False
+
+    async def set_volume(self, volume: float) -> bool:
+        """Set volume level."""
+        session = self._websession or async_get_clientsession(None)
+        try:
+            # Volume is 0.0-1.0, convert to 0-100 for Karotz
+            volume_percent = int(volume * 100)
+            async with session.get(f"http://{self._host}/cgi-bin/volume?level={volume_percent}") as resp:
+                return resp.status == 200
+        except Exception as err:
+            _LOGGER.error("Error setting volume: %s", err)
+            return False
+
+    async def set_mood(self, mood_id: int) -> bool:
+        """Set mood."""
+        session = self._websession or async_get_clientsession(None)
+        try:
+            async with session.get(f"http://{self._host}/cgi-bin/apps/moods?id={mood_id}") as resp:
+                return resp.status == 200
+        except Exception as err:
+            _LOGGER.error("Error setting mood: %s", err)
+            return False
+
+    async def set_ear_position_single(self, position: int) -> bool:
+        """Set ear position using a single position value (0-100)."""
+        # Convert 0-100 position to 0-16 range
+        ear_position = int(position * 16 / 100)
+        return await self.set_ear_position(ear_position, ear_position)

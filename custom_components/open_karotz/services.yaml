@@ -1,0 +1,118 @@
+tts:
+  name: Text-to-Speech
+  description: Speak text using the Karotz TTS engine.
+  fields:
+    text:
+      name: Text
+      description: The text to speak.
+      required: true
+      example: "Hello, this is Karotz speaking."
+      selector:
+        text:
+    voice:
+      name: Voice
+      description: The voice ID to use (1-86). See TTS_VOICES in const.py for available voices.
+      required: false
+      example: "5"
+      selector:
+        number:
+          min: 1
+          max: 86
+          mode: box
+
+play_sound:
+  name: Play Sound
+  description: Play a sound from the Karotz sound library.
+  fields:
+    sound_id:
+      name: Sound ID
+      description: The sound ID to play. See SOUND_LIST in const.py for available sounds.
+      required: true
+      example: "bip1"
+      selector:
+        select:
+          options:
+            - "bip1"
+            - "bling"
+            - "flush"
+            - "install_ok"
+            - "jet1"
+            - "laser_15"
+            - "merde"
+            - "ready"
+            - "rfid_error"
+            - "rfid_ok"
+            - "saut1"
+            - "start"
+            - "twang_01"
+            - "twang_04"
+
+set_volume:
+  name: Set Volume
+  description: Set the Karotz volume level.
+  fields:
+    volume:
+      name: Volume
+      description: Volume level from 0.0 (mute) to 1.0 (maximum).
+      required: true
+      example: "0.5"
+      selector:
+        number:
+          min: 0.0
+          max: 1.0
+          step: 0.01
+          mode: slider
+
+set_led_color:
+  name: Set LED Color
+  description: Set the Karotz LED color using RGB values.
+  fields:
+    rgb_color:
+      name: RGB Color
+      description: The RGB color value as a list [red, green, blue] with values 0-255.
+      required: true
+      example: "[255, 0, 0]"
+      selector:
+        text:
+
+set_ear_position:
+  name: Set Ear Position
+  description: Set the Karotz ear position.
+  fields:
+    position:
+      name: Position
+      description: "Ear position from 0 to 100. Standard values: 0 down, 8 horizontal, 16 up."
+      required: true
+      example: "8"
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: box
+
+set_mood:
+  name: Set Mood
+  description: Set the Karotz mood.
+  fields:
+    mood_id:
+      name: Mood ID
+      description: The mood ID to set (1-301). See MOOD_IDS in const.py for available moods.
+      required: true
+      example: "1"
+      selector:
+        number:
+          min: 1
+          max: 301
+          mode: box
+
+wake_up:
+  name: Wake Up
+  description: Wake up the Karotz from sleep mode.
+
+sleep:
+  name: Sleep
+  description: Put the Karotz to sleep mode.
+
+clear_cache:
+  name: Clear Cache
+  description: Clear the Karotz cache.
