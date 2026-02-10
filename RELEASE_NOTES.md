@@ -1,7 +1,12 @@
-# Release Notes - v1.4.1
+# Release Notes - v1.4.2
 
 ## Overview
-Release of the Open Karotz Home Assistant integration with bug fixes and Home Assistant dev docs validation.
+Release of the Open Karotz Home Assistant integration with updated default TTS voice.
+
+## Changes
+
+### Default Settings
+- Changed default TTS voice from "6" (English US Female) to "5" (English US Male)
 
 ## Fixes
 
@@ -111,7 +116,7 @@ None
 - `/cgi-bin/radio_list` returns 404
 - Some operations may timeout (increase timeout if needed)
 
-## Migration from v1.4.0
+## Migration from v1.4.1
 No breaking changes. Simply update the integration through HACS or manual installation.
 
 ## Future Improvements
