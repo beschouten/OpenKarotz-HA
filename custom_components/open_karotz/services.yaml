@@ -116,3 +116,43 @@ sleep:
 clear_cache:
   name: Clear Cache
   description: Clear the Karotz cache.
+
+set_ear_rotation:
+  name: Set Ear Rotation
+  description: Set the Karotz ear rotation independently for left and right ears.
+  fields:
+    left:
+      name: Left Ear Rotation
+      description: Left ear rotation (1-5). 1=down, 3=horizontal, 5=up.
+      required: true
+      example: "3"
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: box
+    right:
+      name: Right Ear Rotation
+      description: Right ear rotation (1-5). 1=down, 3=horizontal, 5=up.
+      required: true
+      example: "3"
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: box
+
+set_ear_rotation_together:
+  name: Set Ear Rotation Together
+  description: Set both ears to the same rotation.
+  fields:
+    rotation:
+      name: Rotation
+      description: Ear rotation (1-5). 1=down, 3=horizontal, 5=up.
+      required: true
+      example: "3"
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: box

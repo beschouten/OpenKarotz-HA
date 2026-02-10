@@ -1,12 +1,25 @@
-# Release Notes - v1.4.2
+# Release Notes - v1.4.3
 
 ## Overview
-Release of the Open Karotz Home Assistant integration with updated default TTS voice.
+Release of the Open Karotz Home Assistant integration with independent ear rotation control.
+
+## Features
+
+### Ear Rotation Control
+- **Independent Ear Control**: Set left and right ears to different rotation levels (1-5)
+- **Unified Ear Control**: Set both ears to the same rotation level
+- **Rotation Values**: 1=down, 3=horizontal, 5=up
+
+### API Methods Added
+- `set_ear_rotation(left, right)`: Set ears independently (1-5 each)
+- `set_ear_rotation_together(rotation)`: Set both ears to same rotation (1-5)
+- `get_ear_position()`: Get current ear position
 
 ## Changes
 
-### Default Settings
-- Changed default TTS voice from "6" (English US Female) to "5" (English US Male)
+### Services Added
+- **set_ear_rotation**: Set left and right ear rotation independently
+- **set_ear_rotation_together**: Set both ears to same rotation
 
 ## Fixes
 
@@ -116,7 +129,7 @@ None
 - `/cgi-bin/radio_list` returns 404
 - Some operations may timeout (increase timeout if needed)
 
-## Migration from v1.4.1
+## Migration from v1.4.2
 No breaking changes. Simply update the integration through HACS or manual installation.
 
 ## Future Improvements

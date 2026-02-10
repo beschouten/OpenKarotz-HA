@@ -236,3 +236,49 @@ class OpenKarotzAPI:
         # Convert 0-100 position to 0-16 range
         ear_position = int(position * 16 / 100)
         return await self.set_ear_position(ear_position, ear_position)
+
+    async def set_ear_rotation(self, left: int, right: int) -> bool:
+        """Set ear rotation (1-5) for left and right ears independently.
+        
+        Args:
+            left: Left ear rotation (1-5)
+            right: Right ear rotation (1-5)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not (1 <= left <= 5):
+            _LOGGER.error("Left ear rotation must be between 1-5, got %d", left)
+            return False
+        if not (1 <= right <= 5):
+            _LOGGER.error("Right ear rotation must be between 1-5, got %d", right)
+            return False
+        session = self._websession or async_get_clientsession(None)
+        try:
+            async with session.get(f"http://{self._host}/cgi-bin/ears?left={left}&right={right}") as resp:
+                return resp.status == 200
+        except Exception as err:
+            _LOGGER.error("Error setting ear rotation: %s", err)
+            return False
+
+    async def set_ear_rotation_together(self, rotation: int) -> bool:
+        """Set both ears to the same rotation (1-5).
+        
+        Args:
+            rotation: Both ears rotation (1-5)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not (1 <= rotation <= 5):
+            _LOGGER.error("Ear rotation must be between 1-5, got %d", rotation)
+            return False
+        return await self.set_ear_rotation(rotation, rotation)
+
+    async def get_ear_position(self) -> dict | None:
+        """Get current ear position.
+        
+        Returns:
+            Dict with left and right position values, or None on error
+        """
+        return await self._async_get("/cgi-bin/ears")
