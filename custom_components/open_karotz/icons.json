@@ -47,6 +47,17 @@
       "clear_cache": {
         "default": "mdi:trash-can"
       }
-    }
+},
+  "services": {
+    "tts": {"service": "mdi:speaker-message"},
+    "play_sound": {"service": "mdi:music"},
+    "set_volume": {"service": "mdi:volume-high"},
+    "set_led_color": {"service": "mdi:lightbulb-on"},
+    "set_ear_position": {"service": "mdi:rotate-3d-variant"},
+    "set_mood": {"service": "mdi:emoticon-happy"},
+    "wake_up": {"service": "mdi:sleep-off"},
+    "sleep": {"service": "mdi:sleep"},
+    "clear_cache": {"service": "mdi:refresh-sync"}
   }
+ }
 }

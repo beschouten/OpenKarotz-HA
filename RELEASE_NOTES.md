@@ -1,7 +1,26 @@
-# Release Notes - v1.4.0
+# Release Notes - v1.4.1
 
 ## Overview
-Release of the Open Karotz Home Assistant integration with test fixes and documentation updates.
+Release of the Open Karotz Home Assistant integration with bug fixes and Home Assistant dev docs validation.
+
+## Fixes
+
+### Test Fixes
+- Fixed async context manager mocking in API tests
+- Updated TTS voices test expectation (86 voices instead of 30)
+- Updated mood IDs test expectation (301 moods instead of 50)
+- Fixed RFID sensor extra_state_attributes assertion
+- Added icons for all services
+
+### Service Registration
+- Validated service registration follows Home Assistant dev docs
+- Services properly registered in `async_setup` not `async_setup_entry`
+- All service handlers properly check for entries and API instance
+
+## Changes
+
+### Documentation
+- Updated icons.json with service icons
 
 ## Fixes
 
@@ -92,7 +111,7 @@ None
 - `/cgi-bin/radio_list` returns 404
 - Some operations may timeout (increase timeout if needed)
 
-## Migration from v1.3.x
+## Migration from v1.4.0
 No breaking changes. Simply update the integration through HACS or manual installation.
 
 ## Future Improvements

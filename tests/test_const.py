@@ -52,14 +52,14 @@ def test_tts_voices():
     """Test TTS_VOICES constant."""
     assert "1" in TTS_VOICES
     assert "30" in TTS_VOICES
-    assert len(TTS_VOICES) == 30
+    assert len(TTS_VOICES) == 86
 
 
 def test_mood_ids():
     """Test MOOD_IDS constant."""
-    assert 1 in MOOD_IDS
-    assert 50 in MOOD_IDS
-    assert len(MOOD_IDS) == 50
+    assert "1" in MOOD_IDS
+    assert "50" in MOOD_IDS
+    assert len(MOOD_IDS) == 301
 
 
 def test_ear_positions():

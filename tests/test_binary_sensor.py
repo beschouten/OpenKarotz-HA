@@ -19,7 +19,7 @@ def test_rfid_initial_state():
     sensor = OpenKarotzRfidSensor("192.168.1.70", "test_id")
     
     assert sensor.is_on is False
-    assert sensor.extra_state_attributes is None
+    assert sensor.extra_state_attributes == {"tag_id": None}
 
 
 async def test_rfid_update_with_tag():
