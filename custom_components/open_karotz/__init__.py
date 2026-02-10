@@ -68,7 +68,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async def async_open_karotz_tts_service(service_call: ServiceCall) -> None:
         """Handle TTS service call."""
         text = service_call.data.get("text", "")
-        voice = service_call.data.get("voice", "6")
+        voice = service_call.data.get("voice", "5")
 
         if not text:
             raise HomeAssistantError("Text is required")

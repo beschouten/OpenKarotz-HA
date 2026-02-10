@@ -110,7 +110,7 @@ class OpenKarotzAPI:
             _LOGGER.error("Error playing URL: %s", err)
             return False
 
-    async def play_tts(self, text: str, voice: str = "6") -> bool:
+    async def play_tts(self, text: str, voice: str = "5") -> bool:
         """Play text-to-speech."""
         session = self._websession or async_get_clientsession(None)
         import urllib.parse

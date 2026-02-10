@@ -32,7 +32,7 @@ async def test_integration_led_control():
 async def test_integration_tts_service():
     """Test TTS service endpoint."""
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"{BASE_URL}/cgi-bin/tts?text=Hello%20World&voice=6") as resp:
+        async with session.get(f"{BASE_URL}/cgi-bin/tts?text=Hello%20World&voice=5") as resp:
             assert resp.status == 200
             text = await resp.text()
             assert "return" in text
