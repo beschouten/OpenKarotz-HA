@@ -32,9 +32,12 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Open Karotz from a config entry."""
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+    
     host = entry.data["host"]
+    session = async_get_clientsession(hass)
 
-    api = OpenKarotzAPI(host)
+    api = OpenKarotzAPI(host, session)
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = api
     entry.runtime_data = api
