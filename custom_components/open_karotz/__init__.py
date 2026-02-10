@@ -82,9 +82,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             raise HomeAssistantError("Open Karotz not initialized")
 
         try:
-            import urllib.parse
-            encoded_text = urllib.parse.quote(text)
-            await api.play_tts(encoded_text, voice)
+            await api.play_tts(text, voice)
         except Exception as err:
             raise HomeAssistantError(f"Failed to play TTS: {err}")
 
