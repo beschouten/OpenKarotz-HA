@@ -1,21 +1,20 @@
 # Release Notes - v1.4.3
 
 ## Overview
-Release of the Open Karotz Home Assistant integration with independent ear rotation control.
+Release of the Open Karotz Home Assistant integration with TTS encoding fix.
 
-## Features
+## Fixes
+
+### TTS Encoding
+- Fixed double URL encoding in TTS service
+- Text now properly decoded and spoken without encoded characters
+
+## Changes
 
 ### Ear Rotation Control
 - **Independent Ear Control**: Set left and right ears to different rotation levels (1-5)
 - **Unified Ear Control**: Set both ears to the same rotation level
 - **Rotation Values**: 1=down, 3=horizontal, 5=up
-
-### API Methods Added
-- `set_ear_rotation(left, right)`: Set ears independently (1-5 each)
-- `set_ear_rotation_together(rotation)`: Set both ears to same rotation (1-5)
-- `get_ear_position()`: Get current ear position
-
-## Changes
 
 ### Services Added
 - **set_ear_rotation**: Set left and right ear rotation independently
@@ -129,7 +128,7 @@ None
 - `/cgi-bin/radio_list` returns 404
 - Some operations may timeout (increase timeout if needed)
 
-## Migration from v1.4.2
+## Migration from v1.4.3
 No breaking changes. Simply update the integration through HACS or manual installation.
 
 ## Future Improvements
