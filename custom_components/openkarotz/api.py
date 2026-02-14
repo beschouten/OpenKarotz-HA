@@ -232,7 +232,7 @@ class OpenKarotzAPI:
         if rgb_value is not None:
             data["rgb_value"] = rgb_value
 
-        return await self._async_request("POST", API_ENDPOINTS["POST_LEDS"], data)
+        return await self._async_request("POST", API_ENDPOINTS["POST_LEDS"], data=data, skip_connection_check=True)
 
     async def get_tts(self) -> Dict[str, Any]:
         """Get TTS information and state.

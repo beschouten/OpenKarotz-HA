@@ -134,6 +134,8 @@ class OpenKarotzLight(CoordinatorEntity[OpenKarotzCoordinator], LightEntity):
         data = {}
         if "brightness" in kwargs:
             data["brightness"] = kwargs["brightness"]
+        
+        # Handle color/RGB input - these are mutually exclusive with color_temperature
         if color is not None:
             rgb = color
             data["rgb_value"] = f"{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
@@ -144,8 +146,14 @@ class OpenKarotzLight(CoordinatorEntity[OpenKarotzCoordinator], LightEntity):
             if kwargs["color_name"] in PREDEFINED_COLORS:
                 rgb = PREDEFINED_COLORS[kwargs["color_name"]]
                 data["rgb_value"] = f"{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
-        if "color_temperature" in kwargs:
+        elif "color_temperature" in kwargs:
+            # Color temperature mode - clear any RGB values
             data["color_temperature"] = kwargs["color_temperature"]
+            data["rgb_value"] = None
+        else:
+            # No color specified, just turn on with default brightness
+            if not data:
+                data["brightness"] = kwargs.get("brightness", 100)
 
         if data:
             await self.coordinator.api.set_led(**data)
