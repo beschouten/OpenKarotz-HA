@@ -1,7 +1,7 @@
-# Release Notes - v1.4.3
+# Release Notes - v3.0.0
 
 ## Overview
-Release of the Open Karotz Home Assistant integration with TTS encoding fix.
+Major release v3.0.0 with significant architectural improvements and new features.
 
 ## Fixes
 
