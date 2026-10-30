@@ -38,13 +38,16 @@ class KarotzCamera(OpenKarotzEntity, Camera):
     async def async_camera_image(
         self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
-        try:
-            meta = await self._runtime.api.snapshot()
-            filename = meta.get("filename")
-            if not filename:
-                _LOGGER.debug("Snapshot returned no filename: %s", meta)
-                return None
-            return await self._runtime.api.snapshot_get(filename)
-        except OpenKarotzError as err:
-            _LOGGER.warning("Snapshot failed: %s", err)
-            return None
+        # The snapshot CGI is flaky on this firmware (occasionally emits the
+        # raw D-Bus reply instead of HTTP/JSON) — retry once.
+        for attempt in (1, 2):
+            try:
+                meta = await self._runtime.api.snapshot()
+                filename = meta.get("filename")
+                if not filename:
+                    _LOGGER.debug("Snapshot returned no filename: %s", meta)
+                    continue
+                return await self._runtime.api.snapshot_get(filename)
+            except OpenKarotzError as err:
+                _LOGGER.debug("Snapshot attempt %d failed: %s", attempt, err)
+        return None
