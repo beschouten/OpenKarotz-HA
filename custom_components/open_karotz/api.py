@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 TIMEOUT_STATUS = 10
 TIMEOUT_ACTION = 15
-TIMEOUT_PLAYBACK = 90
+TIMEOUT_PLAYBACK = 180
 TIMEOUT_FAF = 2  # fire-and-forget
 
 
