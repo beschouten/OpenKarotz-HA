@@ -13,36 +13,6 @@
     "invalid_host": "Invalid host",
     "unknown": "Unknown error"
   },
-  "entities": {
-    "sensor": {
-      "karotz_storage": {"name": "Karotz Storage"},
-      "usb_storage": {"name": "USB Storage"}
-    },
-    "light": {
-      "led": {"name": "Open Karotz LED"}
-    },
-    "cover": {
-      "ears": {"name": "Open Karotz Ears"}
-    },
-    "media_player": {
-      "media_player": {"name": "Open Karotz"}
-    },
-    "select": {
-      "mood": {"name": "Open Karotz Mood"}
-    },
-    "camera": {
-      "camera": {"name": "Open Karotz Camera"}
-    },
-    "switch": {
-      "sleep": {"name": "Open Karotz Sleep"}
-    },
-    "binary_sensor": {
-      "rfid": {"name": "Open Karotz RFID"}
-    },
-    "button": {
-      "clear_cache": {"name": "Clear Cache"}
-    }
-  },
   "services": {
     "tts": {
       "name": "Text-to-Speech",
@@ -119,6 +89,64 @@
     "clear_cache": {
       "name": "Clear Cache",
       "description": "Clear the Open Karotz cache"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "karotz_storage": {
+        "name": "Internal storage used"
+      },
+      "usb_storage": {
+        "name": "USB storage used"
+      },
+      "karotz_free_space": {
+        "name": "Internal free space"
+      },
+      "tts_cache_size": {
+        "name": "TTS cache entries"
+      },
+      "sleep_time": {
+        "name": "Sleep timestamp"
+      },
+      "nb_moods": {
+        "name": "Moods installed"
+      },
+      "nb_sounds": {
+        "name": "Sounds installed"
+      },
+      "nb_stories": {
+        "name": "Stories installed"
+      },
+      "nb_tags": {
+        "name": "RFID tags enrolled"
+      },
+      "web_version": {
+        "name": "{label} version"
+      },
+      "rootfs_version": {
+        "name": "{label} version"
+      },
+      "patch_version": {
+        "name": "{label} version"
+      }
+    },
+    "light": {
+      "led": {
+        "name": "Nose LED"
+      }
+    },
+    "number": {
+      "ear_left": {
+        "name": "Left ear"
+      },
+      "ear_right": {
+        "name": "Right ear"
+      }
+    },
+    "switch": {
+      "ears_enabled": {
+        "name": "Ear motors"
+      }
     }
   }
 }
