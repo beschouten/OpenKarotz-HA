@@ -31,5 +31,63 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "karotz_storage": {
+        "name": "Internal storage used"
+      },
+      "usb_storage": {
+        "name": "USB storage used"
+      },
+      "karotz_free_space": {
+        "name": "Internal free space"
+      },
+      "tts_cache_size": {
+        "name": "TTS cache entries"
+      },
+      "sleep_time": {
+        "name": "Sleep timestamp"
+      },
+      "nb_moods": {
+        "name": "Moods installed"
+      },
+      "nb_sounds": {
+        "name": "Sounds installed"
+      },
+      "nb_stories": {
+        "name": "Stories installed"
+      },
+      "nb_tags": {
+        "name": "RFID tags enrolled"
+      },
+      "web_version": {
+        "name": "{label} version"
+      },
+      "rootfs_version": {
+        "name": "{label} version"
+      },
+      "patch_version": {
+        "name": "{label} version"
+      }
+    },
+    "light": {
+      "led": {
+        "name": "Nose LED"
+      }
+    },
+    "number": {
+      "ear_left": {
+        "name": "Left ear"
+      },
+      "ear_right": {
+        "name": "Right ear"
+      }
+    },
+    "switch": {
+      "ears_enabled": {
+        "name": "Ear motors"
+      }
+    }
   }
 }

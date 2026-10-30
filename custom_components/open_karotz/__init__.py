@@ -24,7 +24,12 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 # Platforms are added in phases P2-P5 of the v4 plan.
-PLATFORMS: list[Platform] = []
+PLATFORMS: list[Platform] = [
+    Platform.LIGHT,
+    Platform.NUMBER,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
 
 type OpenKarotzConfigEntry = ConfigEntry[KarotzRuntime]
 
