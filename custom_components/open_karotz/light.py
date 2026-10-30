@@ -16,7 +16,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .api import OpenKarotzError
-from .const import EFFECT_BLINK, EFFECT_OFF, EFFECT_PULSE, EFFECT_PULSE_BLINK, EFFECTS
+from .const import EFFECT_BLINK, EFFECT_OFF, EFFECT_PULSE, EFFECTS
 from .entity import OpenKarotzEntity
 from . import KarotzRuntime
 
