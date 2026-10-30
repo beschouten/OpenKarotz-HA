@@ -19,8 +19,7 @@ EAR_HORIZONTAL = 8
 EFFECT_OFF = "off"
 EFFECT_PULSE = "pulse"
 EFFECT_BLINK = "blink"
-EFFECT_PULSE_BLINK = "pulse_blink"
-EFFECTS = [EFFECT_PULSE, EFFECT_BLINK, EFFECT_PULSE_BLINK]
+EFFECTS = [EFFECT_PULSE, EFFECT_BLINK]
 
 # Config entry version history:
 #   1: initial (v3 integration)

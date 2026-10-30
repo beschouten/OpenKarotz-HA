@@ -50,6 +50,16 @@ class KarotzLed(OpenKarotzEntity, LightEntity):
         super().__init__(entry, runtime, "led")
         self._effect = EFFECT_OFF
 
+    @staticmethod
+    def _effect_params(effect: str) -> tuple[int | None, int | None]:
+        """Map effect to (pulse, blink). CGI rejects pulse+blink together and
+        treats a present-but-zero param as active, so omit the inactive one."""
+        if effect == EFFECT_PULSE:
+            return 1, None
+        if effect == EFFECT_BLINK:
+            return None, 1
+        return None, None
+
     @property
     def is_on(self) -> bool:
         return self.status.get("led_color", "000000") not in ("000000", "", None)
@@ -66,23 +76,20 @@ class KarotzLed(OpenKarotzEntity, LightEntity):
 
     @property
     def effect(self) -> str:
-        pulse = self.status.get("led_pulse") == "1"
-        if pulse and self._effect == EFFECT_PULSE_BLINK:
-            return EFFECT_PULSE_BLINK
-        if pulse:
+        if self.status.get("led_pulse") == "1":
             return EFFECT_PULSE
         return EFFECT_OFF
 
     async def async_turn_on(self, **kwargs) -> None:
         rgb = kwargs.get(ATTR_RGB_COLOR) or self.rgb_color or (255, 255, 255)
-        effect = kwargs.get(ATTR_EFFECT, self._effect if self._effect else EFFECT_OFF)
+        effect = kwargs.get(ATTR_EFFECT, EFFECT_OFF)
+        pulse, blink = self._effect_params(effect)
         self._effect = effect
-        pulse = 1 if effect in (EFFECT_PULSE, EFFECT_PULSE_BLINK) else 0
-        blink = 1 if effect in (EFFECT_BLINK, EFFECT_PULSE_BLINK) else 0
         color = "%02x%02x%02x" % tuple(rgb)
         try:
             await self._runtime.api.set_led(color, pulse=pulse, blink=blink)
         except OpenKarotzError as err:
+            self._effect = EFFECT_OFF
             raise HomeAssistantError(f"LED command failed: {err}") from err
         self.async_write_ha_state()
         self.coordinator.async_update_listeners()
