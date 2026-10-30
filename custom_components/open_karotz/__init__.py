@@ -184,7 +184,7 @@ EVENT_RFID_TAG_SCANNED = f"{DOMAIN}_tag_scanned"
 _DEVICE_SCHEMA = vol.Schema({vol.Required("device_id"): str})
 _TAG_SCHEMA = _DEVICE_SCHEMA.extend({vol.Required("tag"): vol.All(str, vol.Length(min=1))})
 _RENAME_SCHEMA = _TAG_SCHEMA.extend(
-    {vol.Optional("name"): str, vol.Optional("color"): vol.All(str, vol.Length(length=2))}
+    {vol.Optional("name"): str, vol.Optional("color"): vol.All(str, vol.Length(min=2, max=2))}
 )
 
 
