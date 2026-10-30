@@ -20,6 +20,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 
 from .api import OpenKarotzError
 from .entity import OpenKarotzEntity
@@ -111,8 +112,8 @@ class KarotzPlayer(OpenKarotzEntity, MediaPlayerEntity):
         await api.play_mood(self._moods[source])
         if self._idle_timer is not None:
             self._idle_timer()
-        self._idle_timer = self.hass.async_call_later(
-            MOOD_MAX_SECONDS, self._async_finish_mood
+        self._idle_timer = async_call_later(
+            self.hass, MOOD_MAX_SECONDS, self._async_finish_mood
         )
 
     def _async_finish_mood(self, _now=None) -> None:
