@@ -1,6 +1,7 @@
 """OpenKarotz integration setup."""
 from __future__ import annotations
 
+import functools
 import logging
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -230,9 +231,10 @@ def _register_rfid_webhook(
         return web.Response(text="ok")
 
     webhook.async_register(
-        hass, DOMAIN, f"OpenKarotz RFID {runtime.api.host}", webhook_id, handle_scan
+        hass, DOMAIN, f"OpenKarotz RFID {runtime.api.host}", webhook_id, handle_scan,
+        allow_get_method=True,  # the Karotz GETs the assigned URL on scan
     )
-    entry.async_on_unload(webhook.async_unregister, hass, webhook_id)
+    entry.async_on_unload(functools.partial(webhook.async_unregister, hass, webhook_id))
 
 
 def _runtime_for_device(hass: HomeAssistant, device_id: str) -> KarotzRuntime:
