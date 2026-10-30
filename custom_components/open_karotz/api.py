@@ -191,9 +191,12 @@ class OpenKarotzAPI:
             "/cgi-bin/sound" + self._params(id=sound_id), timeout=TIMEOUT_PLAYBACK
         )
 
-    async def play_mood(self, mood_id: str | None = None) -> dict:
-        return await self._get(
-            "/cgi-bin/apps/moods" + self._params(id=mood_id), timeout=TIMEOUT_PLAYBACK
+    async def play_mood(self, mood_id: str | None = None) -> bool:
+        """Play a mood. The moods CGI runs EarsReset after audio (hangs on
+        this firmware), so this is fire-and-forget: audio plays, the CGI
+        never returns. Returns False when (expectedly) unacked."""
+        return await self._faf(
+            "/cgi-bin/apps/moods" + self._params(id=mood_id)
         )
 
     async def tts(

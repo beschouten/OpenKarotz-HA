@@ -28,6 +28,7 @@ from . import KarotzRuntime
 _LOGGER = logging.getLogger(__name__)
 
 SOUND_PREFIX = "sound: "
+MOOD_MAX_SECONDS = 120  # mood audio length cap for the playing-state timer
 
 
 async def async_setup_entry(
@@ -72,6 +73,7 @@ class KarotzPlayer(OpenKarotzEntity, MediaPlayerEntity):
         ]
         self._state = MediaPlayerState.IDLE
         self._title: str | None = None
+        self._idle_timer = None
 
     @property
     def state(self) -> MediaPlayerState:
@@ -87,25 +89,36 @@ class KarotzPlayer(OpenKarotzEntity, MediaPlayerEntity):
 
     async def async_select_source(self, source: str) -> None:
         api = self._runtime.api
-        try:
-            if source.startswith(SOUND_PREFIX):
-                sound_id = source[len(SOUND_PREFIX):]
-                self._title = source
-                self._state = MediaPlayerState.PLAYING
-                self.async_write_ha_state()
-                await api.play_sound(sound_id)
-            elif source in self._moods:
-                self._title = source
-                self._state = MediaPlayerState.PLAYING
-                self.async_write_ha_state()
-                await api.play_mood(self._moods[source])
-            else:
-                raise HomeAssistantError(f"Unknown source: {source}")
-        except OpenKarotzError as err:
-            raise HomeAssistantError(f"Playback failed: {err}") from err
-        finally:
-            self._state = MediaPlayerState.IDLE
+        if source.startswith(SOUND_PREFIX):
+            sound_id = source[len(SOUND_PREFIX):]
+            self._title = source
+            self._state = MediaPlayerState.PLAYING
             self.async_write_ha_state()
+            try:
+                await api.play_sound(sound_id)
+            except OpenKarotzError as err:
+                raise HomeAssistantError(f"Playback failed: {err}") from err
+            finally:
+                self._state = MediaPlayerState.IDLE
+                self.async_write_ha_state()
+            return
+        if source not in self._moods:
+            raise HomeAssistantError(f"Unknown source: {source}")
+        # Moods hang server-side after audio (EarsReset family) -> FAF.
+        self._title = source
+        self._state = MediaPlayerState.PLAYING
+        self.async_write_ha_state()
+        await api.play_mood(self._moods[source])
+        if self._idle_timer is not None:
+            self._idle_timer()
+        self._idle_timer = self.hass.async_call_later(
+            MOOD_MAX_SECONDS, self._async_finish_mood
+        )
+
+    def _async_finish_mood(self, _now=None) -> None:
+        self._idle_timer = None
+        self._state = MediaPlayerState.IDLE
+        self.async_write_ha_state()
 
     async def async_play_media(self, media_type: str, media_id: str, **kwargs) -> None:
         """Play: media_id is TTS text (default), or 'sound:<id>' / 'mood:<name>'."""
