@@ -158,24 +158,3 @@ def _register_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(DOMAIN, "tts", handle_tts, schema=_SERVICE_TTS_SCHEMA)
 
-
-async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: OpenKarotzConfigEntry
-) -> dict[str, Any]:
-    """Return diagnostics for a config entry."""
-    runtime: KarotzRuntime | None = getattr(entry, "runtime_data", None)
-    if runtime is None:
-        return {"state": "not_loaded"}
-    coord = runtime.coordinator
-    return {
-        "host": entry.data[CONF_HOST],
-        "poll_interval_seconds": (
-            coord.update_interval.total_seconds() if coord.update_interval else None
-        ),
-        "last_update_success": coord.last_update_success,
-        "last_update_time": (
-            coord.last_update_time.isoformat() if coord.last_update_time else None
-        ),
-        "last_status": coord.data,
-        "version_info": runtime.version,
-    }
