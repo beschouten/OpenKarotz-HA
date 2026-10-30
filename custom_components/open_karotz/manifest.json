@@ -1,7 +1,9 @@
 {
   "domain": "open_karotz",
   "name": "OpenKarotz",
-  "codeowners": ["@beschouten"],
+  "codeowners": [
+    "@beschouten"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/beschouten/OpenKarotz-HA",
   "integration_type": "device",
@@ -9,7 +11,11 @@
   "version": "4.0.0.dev0",
   "requirements": [],
   "dependencies": [],
-  "after_dependencies": ["webhook"],
+  "after_dependencies": [
+    "diagnostics"
+  ],
   "homeassistant": "2025.1.0",
-  "loggers": ["custom_components.open_karotz"]
+  "loggers": [
+    "custom_components.open_karotz"
+  ]
 }
