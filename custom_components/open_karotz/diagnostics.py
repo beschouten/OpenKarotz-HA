@@ -20,15 +20,17 @@ async def async_get_config_entry_diagnostics(
     if runtime is None:
         return {"state": "not_loaded"}
     coord = runtime.coordinator
+    ts = getattr(coord, "last_successful_update", None) or getattr(
+        coord, "last_update_time", None
+    )
     return {
         "host": entry.data[CONF_HOST],
         "poll_interval_seconds": (
             coord.update_interval.total_seconds() if coord.update_interval else None
         ),
         "last_update_success": coord.last_update_success,
-        "last_update_time": (
-            coord.last_update_time.isoformat() if coord.last_update_time else None
-        ),
+        "poll_count": coord.poll_count,
+        "last_update_time": ts.isoformat() if ts else None,
         "last_status": coord.data,
         "version_info": runtime.version,
     }

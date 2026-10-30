@@ -53,8 +53,10 @@ class KarotzCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=None,  # set in async_setup_entry from options
         )
         self.api = api
+        self.poll_count = 0
 
     async def _async_update_data(self) -> dict[str, Any]:
+        self.poll_count += 1
         try:
             return await self.api.get_status()
         except OpenKarotzConnectionError as err:
