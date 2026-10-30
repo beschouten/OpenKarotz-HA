@@ -92,7 +92,7 @@ class KarotzLed(OpenKarotzEntity, LightEntity):
             self._effect = EFFECT_OFF
             raise HomeAssistantError(f"LED command failed: {err}") from err
         self.async_write_ha_state()
-        self.coordinator.async_update_listeners()
+        await self.coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         self._effect = EFFECT_OFF
@@ -101,4 +101,4 @@ class KarotzLed(OpenKarotzEntity, LightEntity):
         except OpenKarotzError as err:
             raise HomeAssistantError(f"LED command failed: {err}") from err
         self.async_write_ha_state()
-        self.coordinator.async_update_listeners()
+        await self.coordinator.async_refresh()

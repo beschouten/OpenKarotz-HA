@@ -45,11 +45,11 @@ class KarotzEarsMode(OpenKarotzEntity, SwitchEntity):
             await self._runtime.api.ears_mode(disable=False)
         except OpenKarotzError as err:
             raise HomeAssistantError(f"Ears enable failed: {err}") from err
-        self.coordinator.async_update_listeners()
+        await self.coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         try:
             await self._runtime.api.ears_mode(disable=True)
         except OpenKarotzError as err:
             raise HomeAssistantError(f"Ears disable failed: {err}") from err
-        self.coordinator.async_update_listeners()
+        await self.coordinator.async_refresh()
