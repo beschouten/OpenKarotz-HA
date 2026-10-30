@@ -21,3 +21,97 @@ tts:
       example: "6"
       selector:
         text:
+
+rfid_start_record:
+  name: Start RFID tag recording
+  description: >
+    Put the Karotz into tag-recording mode (ears flash amber). Present a tag
+    to the nose, then call rfid_stop_record. The start CGI hangs on some
+    firmware while the ears reset completes; the integration dispatches it
+    fire-and-forget, so a timeout here is normal and not an error.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: open_karotz
+
+rfid_stop_record:
+  name: Stop RFID tag recording
+  description: End tag-recording mode.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: open_karotz
+
+rfid_rename:
+  name: Rename RFID tag
+  description: Set a friendly name and/or color code for a recorded tag.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: open_karotz
+    tag:
+      name: Tag ID
+      required: true
+      selector:
+        text:
+    name:
+      name: Name
+      required: false
+      selector:
+        text:
+    color:
+      name: Color code
+      description: Two-character RFID color code (e.g. 31).
+      required: false
+      selector:
+        text:
+
+rfid_delete:
+  name: Delete RFID tag
+  description: Remove a tag from the device registry.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: open_karotz
+    tag:
+      name: Tag ID
+      required: true
+      selector:
+        text:
+
+rfid_assign_webhook:
+  name: Point RFID tag at Home Assistant
+  description: >
+    Assign this Home Assistant instance as the scan action for a tag. When
+    the tag is presented, the Karotz calls the webhook and a
+    open_karotz_tag_scanned event fires (use it in automations).
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: open_karotz
+    tag:
+      name: Tag ID
+      required: true
+      selector:
+        text:
+    name:
+      name: Name
+      description: Optional friendly name stored with the tag.
+      required: false
+      selector:
+        text:

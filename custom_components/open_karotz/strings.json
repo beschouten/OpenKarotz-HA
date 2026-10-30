@@ -123,5 +123,27 @@
         "name": "Reboot"
       }
     }
+  },
+  "services": {
+    "rfid_start_record": {
+      "name": "Start RFID tag recording",
+      "description": "Put the Karotz into tag-recording mode."
+    },
+    "rfid_stop_record": {
+      "name": "Stop RFID tag recording",
+      "description": "End tag-recording mode."
+    },
+    "rfid_rename": {
+      "name": "Rename RFID tag",
+      "description": "Set name/color for a tag."
+    },
+    "rfid_delete": {
+      "name": "Delete RFID tag",
+      "description": "Remove a tag."
+    },
+    "rfid_assign_webhook": {
+      "name": "Point RFID tag at Home Assistant",
+      "description": "Scans of this tag fire open_karotz_tag_scanned."
+    }
   }
 }
