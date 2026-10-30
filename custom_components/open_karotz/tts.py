@@ -52,7 +52,7 @@ class KarotzTTS(OpenKarotzEntity, TextToSpeechEntity):
     ) -> None:
         super().__init__(entry, runtime, "tts")
         self._voices = [
-            Voice(value=v["id"], name=v.get("lang", v["id"])) for v in voices
+            Voice(voice_id=v["id"], name=v.get("lang", v["id"])) for v in voices
         ]
 
     def async_get_supported_voices(self, language: str) -> list[Voice] | None:
