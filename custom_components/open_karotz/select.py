@@ -1,15 +1,18 @@
-"""Select platform for Open Karotz mood control."""
+"""Select platform: quick sound picker (moods live on the media player —
+the select integration caps at 100 options, moods number 305)."""
 from __future__ import annotations
 
 import logging
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import BASE_URL, DOMAIN, MOOD_IDS
+from . import KarotzRuntime
+from .api import OpenKarotzError
+from .entity import OpenKarotzEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,67 +20,37 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Open Karotz select entities."""
-    host = entry.data[CONF_HOST]
-    async_add_entities([OpenKarotzMood(host, entry.entry_id)])
+    """Set up selects from a config entry."""
+    runtime: KarotzRuntime = entry.runtime_data
+    try:
+        sounds = await runtime.api.sound_list()
+    except OpenKarotzError as err:
+        _LOGGER.warning("Could not load sound list: %s", err)
+        sounds = []
+    async_add_entities([KarotzSoundSelect(entry, runtime, [s["id"] for s in sounds])])
 
 
-class OpenKarotzMood(SelectEntity):
-    """Representation of the Open Karotz mood select."""
+class KarotzSoundSelect(OpenKarotzEntity, SelectEntity):
+    """Playing a sound by id. Selection triggers playback then resets."""
 
-    _attr_name = "Open Karotz Mood"
-    _attr_options = MOOD_IDS
-    _attr_translation_key = "mood"
+    _attr_translation_key = "sound"
+    _attr_icon = "mdi:music-note"
 
-    def __init__(self, host: str, entry_id: str) -> None:
-        """Initialize the mood select."""
-        self._host = host
-        self._attr_unique_id = f"{entry_id}_mood"
-        self._current_mood = MOOD_IDS[0]
-
-    async def _async_play_mood(self, mood_id: str) -> bool:
-        """Play mood on Open Karotz."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/apps/moods?id={mood_id}") as resp:
-                if resp.status == 200:
-                    return True
-                _LOGGER.error("Failed to play mood: %s", resp.status)
-                return False
-        except Exception as err:
-            _LOGGER.error("Error playing mood: %s", err)
-            return False
-
-    async def _async_play_random_mood(self) -> bool:
-        """Play random mood on Open Karotz."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/apps/moods") as resp:
-                if resp.status == 200:
-                    return True
-                _LOGGER.error("Failed to play random mood: %s", resp.status)
-                return False
-        except Exception as err:
-            _LOGGER.error("Error playing random mood: %s", err)
-            return False
+    def __init__(self, entry: ConfigEntry, runtime: KarotzRuntime, ids: list[str]) -> None:
+        super().__init__(entry, runtime, "sound")
+        self._attr_options = ids
+        self._current: str | None = None
 
     @property
     def current_option(self) -> str | None:
-        """Return the current mood."""
-        return self._current_mood
+        return self._current
 
     async def async_select_option(self, option: str) -> None:
-        """Select a mood."""
-        if option in MOOD_IDS:
-            self._current_mood = option
-            await self._async_play_mood(option)
-
-    async def async_play_random(self) -> None:
-        """Play random mood."""
-        await self._async_play_random_mood()
+        try:
+            await self._runtime.api.play_sound(option)
+        except OpenKarotzError as err:
+            raise HomeAssistantError(f"Sound playback failed: {err}") from err
+        self._current = option
+        self.async_write_ha_state()

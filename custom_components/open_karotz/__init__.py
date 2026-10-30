@@ -1,361 +1,323 @@
-"""Open Karotz Home Assistant Integration."""
+"""OpenKarotz integration setup."""
 from __future__ import annotations
 
-import asyncio
+import functools
 import logging
-import yaml
+from dataclasses import dataclass, field
+from datetime import timedelta
+from typing import Any
+from urllib.parse import quote
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.service import async_register_admin_service
 import voluptuous as vol
+from aiohttp import web
+from aiohttp.web_request import Request
+from homeassistant.components import webhook
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, Platform
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN
-from .api import OpenKarotzAPI
+from .api import OpenKarotzAPI, OpenKarotzConnectionError, OpenKarotzError
+from .const import (
+    CONF_POLL_INTERVAL,
+    DEFAULT_POLL_INTERVAL,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
+# Platforms are added in phases P2-P5 of the v4 plan.
 PLATFORMS: list[Platform] = [
-    Platform.SENSOR,
+    Platform.BUTTON,
+    Platform.CAMERA,
     Platform.LIGHT,
-    Platform.COVER,
     Platform.MEDIA_PLAYER,
     Platform.SELECT,
-    Platform.CAMERA,
+    Platform.NUMBER,
+    Platform.SENSOR,
     Platform.SWITCH,
-    Platform.BINARY_SENSOR,
-    Platform.BUTTON,
+    Platform.TTS,
 ]
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Open Karotz from a config entry."""
-    from homeassistant.helpers.aiohttp_client import async_get_clientsession
-    
-    host = entry.data["host"]
-    session = async_get_clientsession(hass)
-
-    api = OpenKarotzAPI(host, session)
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = api
-    entry.runtime_data = api
-
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    entry.async_on_unload(entry.add_update_listener(async_update_options))
-
-    return True
+type OpenKarotzConfigEntry = ConfigEntry[KarotzRuntime]
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the Open Karotz integration."""
-    # Load services.yaml using async executor to avoid blocking
-    services_path = hass.config.path("custom_components/open_karotz/services.yaml")
-    try:
-        services_config = await hass.async_add_executor_job(
-            lambda: yaml.safe_load(open(services_path, "r", encoding="utf-8"))
+@dataclass
+class KarotzRuntime:
+    """Runtime data per config entry."""
+
+    api: OpenKarotzAPI
+    coordinator: KarotzCoordinator
+    version: dict[str, Any] = field(default_factory=dict)
+    capabilities: dict[str, bool] = field(default_factory=dict)
+
+
+class KarotzCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """Polls /cgi-bin/status — the single source of device state."""
+
+    config_entry: OpenKarotzConfigEntry
+
+    def __init__(self, hass: HomeAssistant, api: OpenKarotzAPI, entry: OpenKarotzConfigEntry) -> None:
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=entry,
+            name=f"OpenKarotz {api.host}",
+            update_interval=None,  # set in async_setup_entry from options
         )
-    except FileNotFoundError:
-        _LOGGER.error("services.yaml not found at %s", services_path)
-        return False
-    except yaml.YAMLError as err:
-        _LOGGER.error("Error parsing services.yaml: %s", err)
-        return False
+        self.api = api
+        self.poll_count = 0
 
-    # Service handlers
-    async def async_open_karotz_tts_service(service_call: ServiceCall) -> None:
-        """Handle TTS service call."""
-        text = service_call.data.get("text", "")
-        voice = service_call.data.get("voice", "5")
-
-        if not text:
-            raise HomeAssistantError("Text is required")
-
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
+    async def _async_update_data(self) -> dict[str, Any]:
+        self.poll_count += 1
         try:
-            await api.play_tts(text, voice)
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to play TTS: {err}")
+            return await self.api.get_status()
+        except OpenKarotzConnectionError as err:
+            raise UpdateFailed(f"Karotz unreachable: {err}") from err
+        except OpenKarotzError as err:
+            raise UpdateFailed(f"Karotz error: {err}") from err
 
-    async def async_open_karotz_play_sound_service(service_call: ServiceCall) -> None:
-        """Handle play_sound service call."""
-        sound_id = service_call.data.get("sound_id")
 
-        if not sound_id:
-            raise HomeAssistantError("sound_id is required")
+async def async_setup_entry(hass: HomeAssistant, entry: OpenKarotzConfigEntry) -> bool:
+    """Set up OpenKarotz from a config entry."""
+    host = entry.data[CONF_HOST]
+    api = OpenKarotzAPI(host, async_get_clientsession(hass))
 
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
+    coordinator = KarotzCoordinator(hass, api, entry)
+    poll = entry.options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+    coordinator.update_interval = timedelta(seconds=max(30, int(poll)))
 
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
+    try:
+        status = await api.get_status()
+        version = await api.get_version()
+    except OpenKarotzConnectionError as err:
+        raise ConfigEntryNotReady(f"Karotz at {host} unreachable") from err
 
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
+    runtime = KarotzRuntime(api=api, coordinator=coordinator, version=version)
+    entry.runtime_data = runtime
 
-        try:
-            await api.play_sound(sound_id)
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to play sound: {err}")
-
-    async def async_open_karotz_set_volume_service(service_call: ServiceCall) -> None:
-        """Handle set_volume service call."""
-        volume = service_call.data.get("volume")
-
-        if volume is None:
-            raise HomeAssistantError("volume is required")
-
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
-        try:
-            await api.set_volume(volume)
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to set volume: {err}")
-
-    async def async_open_karotz_set_led_color_service(service_call: ServiceCall) -> None:
-        """Handle set_led_color service call."""
-        rgb_color = service_call.data.get("rgb_color")
-
-        if rgb_color is None:
-            raise HomeAssistantError("rgb_color is required")
-
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
-        try:
-            await api.set_led_color(rgb_color)
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to set LED color: {err}")
-
-    async def async_open_karotz_set_ear_position_service(service_call: ServiceCall) -> None:
-        """Handle set_ear_position service call."""
-        position = service_call.data.get("position")
-
-        if position is None:
-            raise HomeAssistantError("position is required")
-
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
-        try:
-            await api.set_ear_position_single(position)
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to set ear position: {err}")
-
-    async def async_open_karotz_set_mood_service(service_call: ServiceCall) -> None:
-        """Handle set_mood service call."""
-        mood_id = service_call.data.get("mood_id")
-
-        if mood_id is None:
-            raise HomeAssistantError("mood_id is required")
-
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
-        try:
-            await api.set_mood(mood_id)
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to set mood: {err}")
-
-    async def async_open_karotz_wake_up_service(service_call: ServiceCall) -> None:
-        """Handle wake_up service call."""
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
-        try:
-            await api.wake_up()
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to wake up: {err}")
-
-    async def async_open_karotz_sleep_service(service_call: ServiceCall) -> None:
-        """Handle sleep service call."""
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
-        try:
-            await api.sleep()
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to put to sleep: {err}")
-
-    async def async_open_karotz_clear_cache_service(service_call: ServiceCall) -> None:
-        """Handle clear_cache service call."""
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            raise HomeAssistantError("No Open Karotz devices configured")
-
-        api = entries[0].runtime_data if hasattr(entries[0], "runtime_data") else None
-        if api is None:
-            api = hass.data[DOMAIN].get(entries[0].entry_id)
-
-        if not api:
-            raise HomeAssistantError("Open Karotz not initialized")
-
-        try:
-            await api.clear_cache()
-        except Exception as err:
-            raise HomeAssistantError(f"Failed to clear cache: {err}")
-
-    # Register all services with schemas from services.yaml
-    if services_config:
-        for service_name, service_config in services_config.items():
-            # Build voluptuous schema from fields
-            fields = service_config.get("fields", {})
-            schema = {}
-            for field_name, field_config in fields.items():
-                required = field_config.get("required", False)
-                # Use the field name as the schema key
-                if required:
-                    schema[vol.Required(field_name)] = str
-                else:
-                    schema[vol.Optional(field_name)] = str
-            
-            # Create voluptuous schema
-            service_schema = vol.Schema(schema)
-            
-            if service_name == "tts":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_tts_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "play_sound":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_play_sound_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "set_volume":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_set_volume_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "set_led_color":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_set_led_color_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "set_ear_position":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_set_ear_position_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "set_mood":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_set_mood_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "wake_up":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_wake_up_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "sleep":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_sleep_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-            elif service_name == "clear_cache":
-                async_register_admin_service(
-                    hass,
-                    DOMAIN,
-                    service_name,
-                    async_open_karotz_clear_cache_service,
-                    schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
-                )
-
+    await coordinator.async_config_entry_first_refresh()
+    _register_rfid_webhook(hass, entry, runtime)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    _register_services(hass)
+    _register_rfid_services(hass)
+    _LOGGER.debug("OpenKarotz %s online: %s", host, status.get("version"))
     return True
 
 
-async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Update options."""
+async def _async_update_listener(hass: HomeAssistant, entry: OpenKarotzConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: OpenKarotzConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    return unload_ok
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate v1 -> v2: backfill unique_id from the device MAC."""
+    if entry.version == 2 and entry.minor_version == 1:
+        return True
+    if entry.version > 2:
+        return False
+
+    host = entry.data.get(CONF_HOST)
+    unique_id = entry.unique_id
+    if host and not unique_id:
+        api = OpenKarotzAPI(host, async_get_clientsession(hass))
+        try:
+            status = await api.get_status()
+            mac = status.get("wlan_mac") or status.get("eth_mac")
+            if mac and mac != "00:00:00:00:00:00":
+                unique_id = mac
+        except OpenKarotzError:
+            _LOGGER.info("Migration: device offline, unique_id will be set on next reload")
+
+    hass.config_entries.async_update_entry(
+        entry, version=2, minor_version=1, unique_id=unique_id
+    )
+    _LOGGER.info("Config entry %s migrated to version 2", entry.entry_id)
+    return True
+
+
+# ----------------------------------------------------------------- services
+_SERVICE_TTS_SCHEMA = vol.Schema(
+    {
+        vol.Required("text"): vol.All(str, vol.Length(min=1)),
+        vol.Optional("voice"): str,
+    }
+)
+
+def _register_services(hass: HomeAssistant) -> None:
+    """Register the legacy-compatible tts service (idempotent).
+
+    Kept for backward compatibility with v3 automations; entity-based
+    targeting lands with the tts platform in P3.
+    """
+    if hass.services.has_service(DOMAIN, "tts"):
+        return
+
+    async def handle_tts(call: ServiceCall) -> None:
+        text = call.data["text"]
+        voice = call.data.get("voice")
+        errors = []
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            runtime: KarotzRuntime | None = getattr(entry, "runtime_data", None)
+            if runtime is None:
+                continue
+            try:
+                await runtime.api.tts(text, voice=voice)
+            except OpenKarotzError as err:
+                errors.append(str(err))
+        if errors:
+            raise HomeAssistantError("; ".join(errors))
+
+    hass.services.async_register(DOMAIN, "tts", handle_tts, schema=_SERVICE_TTS_SCHEMA)
+
+
+# --------------------------------------------------------------------- rfid
+EVENT_RFID_TAG_SCANNED = f"{DOMAIN}_tag_scanned"
+
+_DEVICE_SCHEMA = vol.Schema({vol.Required("device_id"): str})
+_TAG_SCHEMA = _DEVICE_SCHEMA.extend({vol.Required("tag"): vol.All(str, vol.Length(min=1))})
+_RENAME_SCHEMA = _TAG_SCHEMA.extend(
+    {vol.Optional("name"): str, vol.Optional("color"): vol.All(str, vol.Length(min=2, max=2))}
+)
+
+
+def _register_rfid_webhook(
+    hass: HomeAssistant, entry: OpenKarotzConfigEntry, runtime: KarotzRuntime
+) -> None:
+    """Register the per-entry RFID webhook.
+
+    Tags are pointed here with rfid_assign_url; when a tag is scanned the
+    Karotz GETs the URL and we re-fire it as an HA event. Dormant until a
+    tag is assigned — zero cost otherwise.
+    """
+    webhook_id = entry.entry_id
+
+    async def handle_scan(
+        hass: HomeAssistant, webhook_id: str, request: Request
+    ) -> web.Response:
+        tag = request.query.get("tag", "")
+        name = ""
+        if tag:
+            try:
+                info = await runtime.api.rfid_info(tag)
+                name = str(info.get("name") or "")
+            except OpenKarotzError:
+                pass
+        device_id = None
+        mac = entry.unique_id
+        if mac:
+            dev = async_get_device_registry(hass).async_get_device_by_identifier(
+                (DOMAIN, mac), entry.entry_id
+            )
+            device_id = dev.id if dev else None
+        hass.bus.async_fire(
+            EVENT_RFID_TAG_SCANNED,
+            {
+                "tag_id": tag,
+                "name": name,
+                "host": runtime.api.host,
+                "config_entry_id": entry.entry_id,
+                "device_id": device_id,
+            },
+        )
+        return web.Response(text="ok")
+
+    webhook.async_register(
+        hass, DOMAIN, f"OpenKarotz RFID {runtime.api.host}", webhook_id, handle_scan,
+        allowed_methods={"GET", "POST"},  # the Karotz GETs the assigned URL on scan
+    )
+    entry.async_on_unload(functools.partial(webhook.async_unregister, hass, webhook_id))
+
+
+def _runtime_for_device(hass: HomeAssistant, device_id: str) -> KarotzRuntime:
+    """Resolve a device_id selector to the entry runtime."""
+    dev = async_get_device_registry(hass).async_get(device_id)
+    if dev is None:
+        raise HomeAssistantError(f"Unknown device: {device_id}")
+    entry = hass.config_entries.async_get_entry(dev.config_entry_id or "")
+    if entry and entry.domain == DOMAIN and getattr(entry, "runtime_data", None):
+        return entry.runtime_data
+    raise HomeAssistantError(f"Device {device_id} is not an OpenKarotz device")
+
+
+def _guard(fn):
+    """Surface device refusals as clean service errors (400, not 500)."""
+
+    @functools.wraps(fn)
+    async def wrapper(call: ServiceCall) -> None:
+        try:
+            await fn(call)
+        except OpenKarotzError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    return wrapper
+
+
+def _register_rfid_services(hass: HomeAssistant) -> None:
+    if hass.services.has_service(DOMAIN, "rfid_start_record"):
+        return
+
+    async def handle_start_record(call: ServiceCall) -> None:
+        runtime = _runtime_for_device(hass, call.data["device_id"])
+        await runtime.api.rfid_start_record()  # fire-and-forget (EarsReset family)
+
+    @_guard
+    async def handle_stop_record(call: ServiceCall) -> None:
+        runtime = _runtime_for_device(hass, call.data["device_id"])
+        await runtime.api.rfid_stop_record()
+
+    @_guard
+    async def handle_rename(call: ServiceCall) -> None:
+        runtime = _runtime_for_device(hass, call.data["device_id"])
+        await runtime.api.rfid_rename(
+            call.data["tag"], name=call.data.get("name"), color=call.data.get("color")
+        )
+
+    @_guard
+    async def handle_delete(call: ServiceCall) -> None:
+        runtime = _runtime_for_device(hass, call.data["device_id"])
+        await runtime.api.rfid_delete(call.data["tag"])
+
+    @_guard
+    async def handle_assign_webhook(call: ServiceCall) -> None:
+        """Point a tag's action at our webhook so scans fire events."""
+        runtime = _runtime_for_device(hass, call.data["device_id"])
+        entry = next(
+            e for e in hass.config_entries.async_entries(DOMAIN)
+            if getattr(e, "runtime_data", None) is runtime
+        )
+        url = (
+            webhook.async_generate_url(hass, entry.entry_id)
+            + f"?tag={quote(call.data['tag'])}"
+        )
+        await runtime.api.rfid_assign_url(
+            tag=call.data["tag"], url=url, name=call.data.get("name")
+        )
+
+    hass.services.async_register(
+        DOMAIN, "rfid_start_record", handle_start_record, schema=_DEVICE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, "rfid_stop_record", handle_stop_record, schema=_DEVICE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, "rfid_rename", handle_rename, schema=_RENAME_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, "rfid_delete", handle_delete, schema=_TAG_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "rfid_assign_webhook",
+        handle_assign_webhook,
+        schema=_TAG_SCHEMA.extend({vol.Optional("name"): str}),
+    )
+

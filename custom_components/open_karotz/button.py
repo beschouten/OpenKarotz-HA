@@ -1,51 +1,74 @@
-"""Button platform for Open Karotz actions."""
+"""Button platform: maintenance actions."""
 from __future__ import annotations
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from collections.abc import Callable
+from dataclasses import dataclass
 
-from .const import BASE_URL, DOMAIN
+from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+from . import KarotzRuntime
+from .api import OpenKarotzError
+from .entity import OpenKarotzEntity
+
+
+@dataclass(frozen=True, kw_only=True)
+class KarotzButtonDescription(ButtonEntityDescription):
+    """Button bound to an API coroutine."""
+
+    action: Callable = lambda api: api.clear_cache()
+
+
+DESCRIPTIONS: tuple[KarotzButtonDescription, ...] = (
+    KarotzButtonDescription(
+        key="setclock",
+        translation_key="setclock",
+        action=lambda api: api.setclock(),
+    ),
+    KarotzButtonDescription(
+        key="clear_cache",
+        translation_key="clear_cache",
+        action=lambda api: api.clear_cache(),
+    ),
+    KarotzButtonDescription(
+        key="reboot",
+        translation_key="reboot",
+        action=lambda api: api.reboot(),
+    ),
+)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Open Karotz button entities."""
-    host = entry.data[CONF_HOST]
-    async_add_entities([
-        OpenKarotzClearCacheButton(host, entry.entry_id),
-    ])
+    """Set up buttons from a config entry."""
+    runtime: KarotzRuntime = entry.runtime_data
+    async_add_entities(
+        [KarotzButton(entry, runtime, desc) for desc in DESCRIPTIONS]
+    )
 
 
-class OpenKarotzClearCacheButton(ButtonEntity):
-    """Representation of the Open Karotz clear cache button."""
+class KarotzButton(OpenKarotzEntity, ButtonEntity):
+    """One-shot maintenance action."""
 
-    _attr_name = "Open Karotz Clear Cache"
-    _attr_translation_key = "clear_cache"
+    entity_description: KarotzButtonDescription
 
-    def __init__(self, host: str, entry_id: str) -> None:
-        """Initialize the clear cache button."""
-        self._host = host
-        self._attr_unique_id = f"{entry_id}_clear_cache"
-
-    async def _async_send_command(self, endpoint: str) -> bool:
-        """Send command to Open Karotz."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self._host}{endpoint}") as resp:
-                if resp.status == 200:
-                    return True
-                return False
-        except Exception:
-            return False
+    def __init__(
+        self, entry: ConfigEntry, runtime: KarotzRuntime,
+        description: KarotzButtonDescription,
+    ) -> None:
+        super().__init__(entry, runtime, description.key)
+        self.entity_description = description
 
     async def async_press(self) -> None:
-        """Press the button."""
-        await self._async_send_command("/cgi-bin/clear_cache")
+        try:
+            await self.entity_description.action(self._runtime.api)
+        except OpenKarotzError as err:
+            raise HomeAssistantError(
+                f"{self.entity_description.key} failed: {err}"
+            ) from err

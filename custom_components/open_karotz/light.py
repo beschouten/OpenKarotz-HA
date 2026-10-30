@@ -1,15 +1,24 @@
-"""Light platform for Open Karotz LED control."""
+"""Light platform for the OpenKarotz nose LED."""
 from __future__ import annotations
 
 import logging
 
-from homeassistant.components.light import ColorMode, LightEntity
+from homeassistant.components.light import (
+    ATTR_EFFECT,
+    ATTR_RGB_COLOR,
+    ColorMode,
+    LightEntity,
+    LightEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import BASE_URL, DOMAIN, LED_COLORS
+from . import KarotzRuntime
+from .api import OpenKarotzError
+from .const import EFFECT_BLINK, EFFECT_OFF, EFFECT_PULSE, EFFECTS
+from .entity import OpenKarotzEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,71 +26,79 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Open Karotz light entities."""
-    host = entry.data[CONF_HOST]
-    async_add_entities([OpenKarotzLed(host, entry.entry_id)])
+    """Set up the LED light from a config entry."""
+    runtime: KarotzRuntime = entry.runtime_data
+    async_add_entities([KarotzLed(entry, runtime)])
 
 
-class OpenKarotzLed(LightEntity):
-    """Representation of the Open Karotz LED."""
+class KarotzLed(OpenKarotzEntity, LightEntity):
+    """RGB nose LED with pulse/blink effects.
 
-    _attr_name = "Open Karotz LED"
-    _attr_color_mode = ColorMode.RGB
-    _attr_supported_color_modes = {ColorMode.RGB}
+    State truth: status.led_color / status.led_pulse. Blink is not reported
+    by status, so the last-applied effect is tracked optimistically.
+    """
+
     _attr_translation_key = "led"
+    _attr_supported_color_modes = {ColorMode.RGB}  # noqa: RUF012
+    _attr_color_mode = ColorMode.RGB
+    _attr_supported_features = LightEntityFeature.EFFECT
+    _attr_effect_list = EFFECTS
 
-    def __init__(self, host: str, entry_id: str) -> None:
-        """Initialize the LED."""
-        self._host = host
-        self._attr_unique_id = f"{entry_id}_led"
-        self._attr_is_on = False
-        self._rgb_color = (0, 0, 0)
+    def __init__(self, entry: ConfigEntry, runtime: KarotzRuntime) -> None:
+        super().__init__(entry, runtime, "led")
+        self._effect = EFFECT_OFF
 
-    async def _async_send_command(self, color: str) -> bool:
-        """Send command to Open Karotz."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+    @staticmethod
+    def _effect_params(effect: str) -> tuple[int | None, int | None]:
+        """Map effect to (pulse, blink). CGI rejects pulse+blink together and
+        treats a present-but-zero param as active, so omit the inactive one."""
+        if effect == EFFECT_PULSE:
+            return 1, None
+        if effect == EFFECT_BLINK:
+            return None, 1
+        return None, None
 
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/leds?color={color}") as resp:
-                if resp.status == 200:
-                    return True
-                _LOGGER.error("Failed to set LED color: %s", resp.status)
-                return False
-        except Exception as err:
-            _LOGGER.error("Error sending command: %s", err)
-            return False
-
-    async def async_update(self) -> None:
-        """Update the entity status."""
-        if self._rgb_color != (0, 0, 0):
-            self._attr_is_on = True
-        else:
-            self._attr_is_on = False
+    @property
+    def is_on(self) -> bool:
+        return self.status.get("led_color", "000000") not in ("000000", "", None)
 
     @property
     def rgb_color(self) -> tuple[int, int, int] | None:
-        """Return the color variable."""
-        return self._rgb_color
+        raw = self.status.get("led_color") or ""
+        if len(raw) != 6:
+            return None
+        try:
+            return (int(raw[0:2], 16), int(raw[2:4], 16), int(raw[4:6], 16))
+        except ValueError:
+            return None
+
+    @property
+    def effect(self) -> str:
+        if self.status.get("led_pulse") == "1":
+            return EFFECT_PULSE
+        return EFFECT_OFF
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn on the LED."""
-        rgb = kwargs.get("rgb_color", self._rgb_color)
-        self._rgb_color = rgb
-        self._attr_is_on = True
-
-        hex_color = f"{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}"
-        await self._async_send_command(hex_color)
+        rgb = kwargs.get(ATTR_RGB_COLOR) or self.rgb_color or (255, 255, 255)
+        effect = kwargs.get(ATTR_EFFECT, EFFECT_OFF)
+        pulse, blink = self._effect_params(effect)
+        self._effect = effect
+        color = "{:02x}{:02x}{:02x}".format(*rgb)
+        try:
+            await self._runtime.api.set_led(color, pulse=pulse, blink=blink)
+        except OpenKarotzError as err:
+            self._effect = EFFECT_OFF
+            raise HomeAssistantError(f"LED command failed: {err}") from err
+        self.async_write_ha_state()
+        await self.coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Turn off the LED."""
-        self._rgb_color = (0, 0, 0)
-        self._attr_is_on = False
-        await self._async_send_command("000000")
-
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
-        self.async_schedule_update_ha_state(force_refresh=True)
+        self._effect = EFFECT_OFF
+        try:
+            await self._runtime.api.set_led("000000")
+        except OpenKarotzError as err:
+            raise HomeAssistantError(f"LED command failed: {err}") from err
+        self.async_write_ha_state()
+        await self.coordinator.async_refresh()

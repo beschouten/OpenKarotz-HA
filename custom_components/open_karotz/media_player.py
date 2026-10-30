@@ -1,156 +1,143 @@
-"""Media player platform for Open Karotz."""
+"""Media player platform for OpenKarotz (play-only, D2).
+
+The firmware has no stop/pause/volume (sound_control is dead), so this
+player supports SELECT_SOURCE (moods + sounds) and PLAY_MEDIA (TTS text)
+only. Playback endpoints are synchronous: state is 'playing' while the
+CGI call is in flight, then back to 'idle'.
+"""
 from __future__ import annotations
 
+import html
 import logging
 
 from homeassistant.components.media_player import (
+    MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
-    MediaType,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 
-from .const import BASE_URL, DOMAIN, SOUND_LIST
+from . import KarotzRuntime
+from .api import OpenKarotzError
+from .entity import OpenKarotzEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+SOUND_PREFIX = "sound: "
+MOOD_MAX_SECONDS = 120  # mood audio length cap for the playing-state timer
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Open Karotz media player entities."""
-    host = entry.data[CONF_HOST]
-    async_add_entities([OpenKarotzMediaPlayer(host, entry.entry_id)])
+    """Set up the media player from a config entry."""
+    runtime: KarotzRuntime = entry.runtime_data
+    moods: list[dict] = []
+    sounds: list[dict] = []
+    try:
+        moods = await runtime.api.moods_list()
+        sounds = await runtime.api.sound_list()
+    except OpenKarotzError as err:
+        _LOGGER.warning("Could not load moods/sounds: %s", err)
+    async_add_entities([KarotzPlayer(entry, runtime, moods, sounds)])
 
 
-class OpenKarotzMediaPlayer(MediaPlayerEntity):
-    """Representation of the Open Karotz media player."""
+class KarotzPlayer(OpenKarotzEntity, MediaPlayerEntity):
+    """Play-only media player backed by moods/sounds/TTS CGIs."""
 
-    _attr_name = "Open Karotz"
-    _attr_media_content_type = MediaType.MUSIC
+    _attr_translation_key = "player"
+    _attr_device_class = MediaPlayerDeviceClass.SPEAKER
     _attr_supported_features = (
         MediaPlayerEntityFeature.PLAY_MEDIA
-        | MediaPlayerEntityFeature.PLAY
-        | MediaPlayerEntityFeature.STOP
-        | MediaPlayerEntityFeature.VOLUME_SET
+        | MediaPlayerEntityFeature.SELECT_SOURCE
     )
-    _attr_translation_key = "media_player"
 
-    def __init__(self, host: str, entry_id: str) -> None:
-        """Initialize the media player."""
-        self._host = host
-        self._attr_unique_id = f"{entry_id}_media_player"
+    def __init__(
+        self, entry: ConfigEntry, runtime: KarotzRuntime,
+        moods: list[dict], sounds: list[dict],
+    ) -> None:
+        super().__init__(entry, runtime, "player")
+        self._moods = {
+            html.unescape(m.get("text", m.get("id", ""))): m["id"] for m in moods
+        }
+        self._sounds = [s["id"] for s in sounds]
+        self._attr_source_list = [
+            *[SOUND_PREFIX + s for s in self._sounds],
+            *self._moods.keys(),
+        ]
         self._state = MediaPlayerState.IDLE
-        self._volume = 0.5
-        self._title = None
-        self._source = None
-
-    async def _async_send_command(self, endpoint: str) -> bool:
-        """Send command to Open Karotz."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self._host}{endpoint}") as resp:
-                if resp.status == 200:
-                    return True
-                _LOGGER.error("Failed to send command: %s", resp.status)
-                return False
-        except Exception as err:
-            _LOGGER.error("Error sending command: %s", err)
-            return False
-
-    async def _async_play_local(self, sound_id: str) -> bool:
-        """Play local sound."""
-        return await self._async_send_command(f"/cgi-bin/sound?id={sound_id}")
-
-    async def _async_play_url(self, url: str) -> bool:
-        """Play sound from URL."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/sound?url={url}") as resp:
-                if resp.status == 200:
-                    return True
-                _LOGGER.error("Failed to play URL: %s", resp.status)
-                return False
-        except Exception as err:
-            _LOGGER.error("Error playing URL: %s", err)
-            return False
-
-    async def _async_tts(self, text: str, voice: str = "1") -> bool:
-        """Play text-to-speech."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/tts?text={text}&voice={voice}") as resp:
-                if resp.status == 200:
-                    return True
-                _LOGGER.error("Failed to play TTS: %s", resp.status)
-                return False
-        except Exception as err:
-            _LOGGER.error("Error playing TTS: %s", err)
-            return False
-
-    async def _async_stop(self) -> bool:
-        """Stop playback."""
-        return await self._async_send_command("/cgi-bin/stop")
+        self._title: str | None = None
+        self._idle_timer = None
 
     @property
-    def state(self) -> MediaPlayerState | None:
-        """Return the state of the media player."""
+    def state(self) -> MediaPlayerState:
         return self._state
 
     @property
-    def volume_level(self) -> float | None:
-        """Return the volume level."""
-        return self._volume
-
-    @property
     def media_title(self) -> str | None:
-        """Return the media title."""
         return self._title
 
-    async def async_update(self) -> None:
-        """Update the entity status."""
-        pass
+    @property
+    def source(self) -> str | None:
+        return self._title if self._title in (self._attr_source_list or []) else None
 
-    async def async_media_play(self) -> None:
-        """Play media."""
+    async def async_select_source(self, source: str) -> None:
+        api = self._runtime.api
+        if source.startswith(SOUND_PREFIX):
+            sound_id = source[len(SOUND_PREFIX):]
+            self._title = source
+            self._state = MediaPlayerState.PLAYING
+            self.async_write_ha_state()
+            try:
+                await api.play_sound(sound_id)
+            except OpenKarotzError as err:
+                raise HomeAssistantError(f"Playback failed: {err}") from err
+            finally:
+                self._state = MediaPlayerState.IDLE
+                self.async_write_ha_state()
+            return
+        if source not in self._moods:
+            raise HomeAssistantError(f"Unknown source: {source}")
+        # Moods hang server-side after audio (EarsReset family) -> FAF.
+        self._title = source
         self._state = MediaPlayerState.PLAYING
         self.async_write_ha_state()
+        await api.play_mood(self._moods[source])
+        if self._idle_timer is not None:
+            self._idle_timer()
+        self._idle_timer = async_call_later(
+            self.hass, MOOD_MAX_SECONDS, self._async_finish_mood
+        )
 
-    async def async_media_stop(self) -> None:
-        """Stop media."""
-        await self._async_stop()
+    def _async_finish_mood(self, _now=None) -> None:
+        self._idle_timer = None
         self._state = MediaPlayerState.IDLE
         self.async_write_ha_state()
 
-    async def async_set_volume_level(self, volume: float) -> None:
-        """Set volume level."""
-        self._volume = volume
-
-    async def async_play_media(
-        self, media_type: str | None, media_id: str | None, **kwargs
-    ) -> None:
-        """Play media."""
-        if media_type == MediaType.MUSIC and media_id:
-            if media_id in SOUND_LIST:
-                await self._async_play_local(media_id)
-                self._title = f"Sound {media_id}"
-                self._state = MediaPlayerState.PLAYING
-                self.async_write_ha_state()
-            else:
-                _LOGGER.warning("Invalid sound ID: %s", media_id)
-
-    async def async_select_source(self, source: str) -> None:
-        """Select input source."""
-        self._source = source
+    async def async_play_media(self, media_type: str, media_id: str, **kwargs) -> None:
+        """Play: media_id is TTS text (default), or 'sound:<id>' / 'mood:<name>'."""
+        if media_id.startswith("sound:"):
+            await self.async_select_source(
+                SOUND_PREFIX + media_id.split(":", 1)[1].strip()
+            )
+            return
+        if media_id.startswith("mood:"):
+            await self.async_select_source(media_id.split(":", 1)[1].strip())
+            return
+        self._title = media_id[:80]
+        self._state = MediaPlayerState.PLAYING
+        self.async_write_ha_state()
+        try:
+            await self._runtime.api.tts(media_id)
+        except OpenKarotzError as err:
+            raise HomeAssistantError(f"TTS failed: {err}") from err
+        finally:
+            self._state = MediaPlayerState.IDLE
+            self.async_write_ha_state()

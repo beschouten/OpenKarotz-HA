@@ -1,130 +1,164 @@
-"""Sensor platform for Open Karotz."""
+"""Sensor platform for OpenKarotz."""
 from __future__ import annotations
 
-import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, PERCENTAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-    DataUpdateCoordinator,
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import PERCENTAGE, EntityCategory
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN, STORAGE_KAROTZ, STORAGE_USB
+from . import KarotzRuntime
+from .entity import OpenKarotzEntity
 
-_LOGGER = logging.getLogger(__name__)
+
+def _int(value: str | None):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+@dataclass(frozen=True, kw_only=True)
+class KarotzSensorDescription(SensorEntityDescription):
+    """Sensor description bound to a status key."""
+
+    value: Callable[[dict], object] = lambda s: s
+
+
+DESCRIPTIONS: tuple[KarotzSensorDescription, ...] = (
+    KarotzSensorDescription(
+        key="karotz_storage",
+        translation_key="karotz_storage",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        value=lambda s: _int(s.get("karotz_percent_used_space")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="usb_storage",
+        translation_key="usb_storage",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        # "" or "-1" when no USB drive mounted -> unavailable
+        value=lambda s: (
+            v if (v := _int(s.get("usb_percent_used_space"))) not in (None, -1) else None
+        ),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="karotz_free_space",
+        translation_key="karotz_free_space",
+        value=lambda s: s.get("karotz_free_space") or None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="tts_cache_size",
+        translation_key="tts_cache_size",
+        state_class=SensorStateClass.MEASUREMENT,
+        value=lambda s: _int(s.get("tts_cache_size")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="sleep_time",
+        translation_key="sleep_time",
+        value=lambda s: _int(s.get("sleep_time")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="nb_moods",
+        translation_key="nb_moods",
+        state_class=SensorStateClass.TOTAL,
+        value=lambda s: _int(s.get("nb_moods")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="nb_sounds",
+        translation_key="nb_sounds",
+        state_class=SensorStateClass.TOTAL,
+        value=lambda s: _int(s.get("nb_sounds")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="nb_stories",
+        translation_key="nb_stories",
+        state_class=SensorStateClass.TOTAL,
+        value=lambda s: _int(s.get("nb_stories")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    KarotzSensorDescription(
+        key="nb_tags",
+        translation_key="nb_tags",
+        state_class=SensorStateClass.TOTAL,
+        value=lambda s: _int(s.get("nb_tags")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Open Karotz sensor entities."""
-    host = entry.data[CONF_HOST]
-    coordinator = OpenKarotzCoordinator(hass, host)
-
-    await coordinator.async_config_entry_first_refresh()
-
+    """Set up sensors from a config entry."""
+    runtime: KarotzRuntime = entry.runtime_data
     async_add_entities(
         [
-            KarotzStorageSensor(coordinator, entry),
-            UsbStorageSensor(coordinator, entry),
+            KarotzSensor(entry, runtime, desc)
+            for desc in DESCRIPTIONS
+        ]
+        + [
+            KarotzVersionSensor(entry, runtime, "web_version", "version", "Web"),
+            KarotzVersionSensor(
+                entry, runtime, "rootfs_version", "rootfs_version", "Rootfs"
+            ),
+            KarotzVersionSensor(
+                entry, runtime, "patch_version", "patch_version", "Patch"
+            ),
         ]
     )
 
 
-class OpenKarotzCoordinator(DataUpdateCoordinator):
-    """Class to manage data updates for Open Karotz."""
+class KarotzSensor(OpenKarotzEntity, SensorEntity):
+    """Sensor fed by a key of the status payload."""
 
-    def __init__(self, hass: HomeAssistant, host: str) -> None:
-        """Initialize the coordinator."""
-        super().__init__(
-            hass,
-            _LOGGER,
-            name="Open Karotz",
-            update_method=self._async_update_data,
-            update_interval=None,
-        )
-        self.host = host
+    entity_description: KarotzSensorDescription
 
-    async def _async_update_data(self):
-        """Fetch data from Open Karotz."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-        import json
-
-        session = async_get_clientsession(self.hass)
-        try:
-            async with session.get(f"http://{self.host}/cgi-bin/get_free_space") as resp:
-                if resp.status == 200:
-                    text = await resp.text()
-                    try:
-                        return json.loads(text)
-                    except json.JSONDecodeError:
-                        _LOGGER.error("Failed to parse JSON from get_free_space: %s", text)
-                        return None
-                _LOGGER.error("Failed to fetch free space: %s", resp.status)
-                return None
-        except Exception as err:
-            _LOGGER.error("Error fetching data: %s", err)
-            return None
-
-
-class KarotzStorageSensor(CoordinatorEntity, SensorEntity):
-    """Representation of the Karotz storage sensor."""
-
-    _attr_translation_key = "karotz_storage"
-    _attr_native_unit_of_measurement = PERCENTAGE
-
-    def __init__(self, coordinator: OpenKarotzCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_name = "Karotz Storage"
-        self._attr_unique_id = f"{entry.entry_id}_{STORAGE_KAROTZ}"
+    def __init__(
+        self, entry, runtime: KarotzRuntime, description: KarotzSensorDescription
+    ) -> None:
+        super().__init__(entry, runtime, description.key)
+        self.entity_description = description
 
     @property
-    def native_value(self) -> str | None:
-        """Return the native value of the sensor."""
-        if self.coordinator.data is None:
-            return None
-        return self.coordinator.data.get("karotz", {}).get("percent_used_space")
-
-    @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return "mdi:memory"
+    def native_value(self):
+        return self.entity_description.value(self.status)
 
 
-class UsbStorageSensor(CoordinatorEntity, SensorEntity):
-    """Representation of the USB storage sensor."""
+class KarotzVersionSensor(OpenKarotzEntity, SensorEntity):
+    """Firmware version sensors (static, from get_version)."""
 
-    _attr_translation_key = "usb_storage"
-    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator: OpenKarotzCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_name = "USB Storage"
-        self._attr_unique_id = f"{entry.entry_id}_{STORAGE_USB}"
-
-    @property
-    def native_value(self) -> str | None:
-        """Return the native value of the sensor."""
-        if self.coordinator.data is None:
-            return None
-        return self.coordinator.data.get("usb", {}).get("percent_used_space")
-
-    @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return "mdi:usb"
+    def __init__(
+        self, entry, runtime: KarotzRuntime, key: str, version_key: str, label: str
+    ) -> None:
+        super().__init__(entry, runtime, key)
+        self._version_key = version_key
+        self._attr_translation_key = key
+        self._attr_translation_placeholders = {"label": label}
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        if self.coordinator.data is None:
-            return False
-        return self.coordinator.data.get("usb", {}).get("percent_used_space", -1) >= 0
+        return bool(self._runtime.version)
+
+    @property
+    def native_value(self):
+        return (self._runtime.version or {}).get(self._version_key)

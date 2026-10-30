@@ -1,0 +1,149 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to OpenKarotz",
+        "data": {
+          "host": "Device IP address",
+          "name": "Name"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure OpenKarotz",
+        "data": {
+          "host": "Device IP address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach an OpenKarotz device at that address."
+    },
+    "abort": {
+      "already_configured": "This Karotz is already configured.",
+      "reconfigure_successful": "Reconfiguration successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "poll_interval": "Status poll interval (seconds, min 30)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "karotz_storage": {
+        "name": "Internal storage used"
+      },
+      "usb_storage": {
+        "name": "USB storage used"
+      },
+      "karotz_free_space": {
+        "name": "Internal free space"
+      },
+      "tts_cache_size": {
+        "name": "TTS cache entries"
+      },
+      "sleep_time": {
+        "name": "Sleep timestamp"
+      },
+      "nb_moods": {
+        "name": "Moods installed"
+      },
+      "nb_sounds": {
+        "name": "Sounds installed"
+      },
+      "nb_stories": {
+        "name": "Stories installed"
+      },
+      "nb_tags": {
+        "name": "RFID tags enrolled"
+      },
+      "web_version": {
+        "name": "{label} version"
+      },
+      "rootfs_version": {
+        "name": "{label} version"
+      },
+      "patch_version": {
+        "name": "{label} version"
+      }
+    },
+    "light": {
+      "led": {
+        "name": "Nose LED"
+      }
+    },
+    "number": {
+      "ear_left": {
+        "name": "Left ear"
+      },
+      "ear_right": {
+        "name": "Right ear"
+      }
+    },
+    "switch": {
+      "ears_enabled": {
+        "name": "Ear motors"
+      },
+      "sleep": {
+        "name": "Sleep mode"
+      }
+    },
+    "media_player": {
+      "player": {
+        "name": "Speaker"
+      }
+    },
+    "select": {
+      "sound": {
+        "name": "Play sound"
+      }
+    },
+    "tts": {
+      "tts": {
+        "name": "Text to speech"
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Camera"
+      }
+    },
+    "button": {
+      "setclock": {
+        "name": "Sync clock (NTP)"
+      },
+      "clear_cache": {
+        "name": "Clear TTS cache"
+      },
+      "reboot": {
+        "name": "Reboot"
+      }
+    }
+  },
+  "services": {
+    "rfid_start_record": {
+      "name": "Start RFID tag recording",
+      "description": "Put the Karotz into tag-recording mode."
+    },
+    "rfid_stop_record": {
+      "name": "Stop RFID tag recording",
+      "description": "End tag-recording mode."
+    },
+    "rfid_rename": {
+      "name": "Rename RFID tag",
+      "description": "Set name/color for a tag."
+    },
+    "rfid_delete": {
+      "name": "Delete RFID tag",
+      "description": "Remove a tag."
+    },
+    "rfid_assign_webhook": {
+      "name": "Point RFID tag at Home Assistant",
+      "description": "Scans of this tag fire open_karotz_tag_scanned."
+    }
+  }
+}
