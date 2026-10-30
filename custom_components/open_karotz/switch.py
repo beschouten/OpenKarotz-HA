@@ -1,6 +1,8 @@
 """Switch platform: ear motor enable/disable."""
 from __future__ import annotations
 
+import asyncio
+
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -72,7 +74,15 @@ class KarotzSleep(OpenKarotzEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         await self._runtime.api.sleep()
         self.async_write_ha_state()
+        # CGI completes (writes karotz.sleep) seconds after our FAF timeout;
+        # one delayed refresh picks up the true state without blocking.
+        self.hass.async_create_task(self._refresh_after(12))
 
     async def async_turn_off(self, **kwargs) -> None:
         await self._runtime.api.wakeup()
         self.async_write_ha_state()
+        self.hass.async_create_task(self._refresh_after(12))
+
+    async def _refresh_after(self, delay: float) -> None:
+        await asyncio.sleep(delay)
+        await self.coordinator.async_refresh()
