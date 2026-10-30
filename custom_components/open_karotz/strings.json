@@ -87,6 +87,9 @@
     "switch": {
       "ears_enabled": {
         "name": "Ear motors"
+      },
+      "sleep": {
+        "name": "Sleep mode"
       }
     },
     "media_player": {
@@ -102,6 +105,22 @@
     "tts": {
       "tts": {
         "name": "Text to speech"
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Camera"
+      }
+    },
+    "button": {
+      "setclock": {
+        "name": "Sync clock (NTP)"
+      },
+      "clear_cache": {
+        "name": "Clear TTS cache"
+      },
+      "reboot": {
+        "name": "Reboot"
       }
     }
   }

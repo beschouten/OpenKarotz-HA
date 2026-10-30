@@ -19,7 +19,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up switches from a config entry."""
     runtime: KarotzRuntime = entry.runtime_data
-    async_add_entities([KarotzEarsMode(entry, runtime)])
+    async_add_entities([KarotzEarsMode(entry, runtime), KarotzSleep(entry, runtime)])
 
 
 class KarotzEarsMode(OpenKarotzEntity, SwitchEntity):
@@ -53,3 +53,26 @@ class KarotzEarsMode(OpenKarotzEntity, SwitchEntity):
         except OpenKarotzError as err:
             raise HomeAssistantError(f"Ears disable failed: {err}") from err
         await self.coordinator.async_refresh()
+
+
+class KarotzSleep(OpenKarotzEntity, SwitchEntity):
+    """Sleep mode. Both CGIs hang (EarsReset family) -> fire-and-forget;
+    truth comes from status.sleep on the next coordinator poll."""
+
+    _attr_translation_key = "sleep"
+    _attr_icon = "mdi:power-sleep"
+
+    def __init__(self, entry: ConfigEntry, runtime: KarotzRuntime) -> None:
+        super().__init__(entry, runtime, "sleep")
+
+    @property
+    def is_on(self) -> bool:
+        return self.status.get("sleep") == "1"
+
+    async def async_turn_on(self, **kwargs) -> None:
+        await self._runtime.api.sleep()
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self._runtime.api.wakeup()
+        self.async_write_ha_state()
