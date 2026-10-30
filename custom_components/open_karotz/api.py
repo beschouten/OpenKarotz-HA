@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import socket
 from typing import Any
 from urllib.parse import quote
 
@@ -62,6 +63,48 @@ class OpenKarotzAPI:
         return f"http://{self._host}"
 
     # ------------------------------------------------------------------ core
+    async def _raw_get(self, path: str, timeout: float) -> bytes:
+        """Minimal HTTP/1.0 client for CGIs that emit non-compliant responses.
+
+        The snapshot CGI leaks a D-Bus reply between the status line and the
+        headers ("Invalid header token" for aiohttp); curl tolerates it, so
+        we read until EOF and parse leniently. Runs on a thread: asyncio's
+        StreamReader returns early on this server's status-line-then-pause
+        write pattern, a blocking socket does not.
+        """
+        def _fetch() -> bytes:
+            with socket.create_connection((self._host, 80), timeout=timeout) as sock:
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                sock.sendall(
+                    f"GET {path} HTTP/1.0\r\nHost: {self._host}\r\n\r\n".encode()
+                )
+                buf = bytearray()
+                while chunk := sock.recv(65536):
+                    buf.extend(chunk)
+                    if len(buf) > 2_000_000:
+                        break
+                return bytes(buf)
+
+        try:
+            data = await asyncio.to_thread(_fetch)
+        except (OSError, ConnectionResetError) as exc:
+            raise OpenKarotzConnectionError(f"{path}: {exc}") from exc
+        # Header block uses mixed line endings (status line \r\n, CGI echo
+        # headers bare \n). Body starts at the first blank line of either
+        # flavour; binary bodies are safe because the real separator always
+        # precedes any \n\n that may occur inside the payload.
+        cut_crlf = data.find(b"\r\n\r\n")
+        cut_lf = data.find(b"\n\n")
+        candidates = [i for i in (cut_crlf, cut_lf) if i != -1]
+        if not candidates:
+            raise OpenKarotzRefused(f"{path}: malformed HTTP response")
+        cut = min(candidates)
+        head = data[:cut]
+        body = data[cut + (4 if cut == cut_crlf else 2):]
+        if not head.startswith(b"HTTP/"):
+            raise OpenKarotzRefused(f"{path}: malformed HTTP response")
+        return body
+
     async def _get(
         self,
         path: str,
@@ -220,18 +263,29 @@ class OpenKarotzAPI:
 
     # --------------------------------------------------------------- camera
     async def snapshot(self, silent: bool = True) -> dict:
-        """Returns {'filename':..., 'thumb':...} — NOT image bytes."""
-        return await self._get(
-            "/cgi-bin/snapshot" + self._params(silent=1 if silent else None),
-            timeout=TIMEOUT_PLAYBACK,
-        )
+        """Returns {'filename':..., 'thumb':...} — NOT image bytes.
+
+        Uses the raw client: this CGI leaks D-Bus output into the HTTP
+        header block, which aiohttp rejects outright.
+        """
+        path = "/cgi-bin/snapshot" + self._params(silent=1 if silent else None)
+        async with self._lock:
+            body = await self._raw_get(path, timeout=TIMEOUT_PLAYBACK)
+        try:
+            data = json.loads(body.decode("utf-8", "replace"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise OpenKarotzRefused(f"{path}: malformed snapshot response") from exc
+        if isinstance(data, dict) and not self.ok(data):
+            raise OpenKarotzRefused(str(data.get("msg") or data.get("return")))
+        return data
 
     async def snapshot_get(self, filename: str) -> bytes:
-        return await self._get(
-            "/cgi-bin/snapshot_get" + self._params(filename=filename),
-            timeout=TIMEOUT_STATUS,
-            raw=True,
-        )
+        # raw client too: same CGI family, binary-safe (reads to EOF)
+        async with self._lock:
+            return await self._raw_get(
+                "/cgi-bin/snapshot_get" + self._params(filename=filename),
+                timeout=TIMEOUT_PLAYBACK,
+            )
 
     async def snapshot_list(self) -> list[dict]:
         data = await self._get("/cgi-bin/snapshot_list", timeout=TIMEOUT_STATUS)
