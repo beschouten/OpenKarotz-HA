@@ -1,70 +1,128 @@
-"""Config flow for Open Karotz integration."""
+"""Config flow for OpenKarotz."""
 from __future__ import annotations
 
 import logging
 from typing import Any
 
 import voluptuous as vol
-from homeassistant import config_entries
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN
+from .api import OpenKarotzAPI, OpenKarotzError
+from .const import (
+    CONFIG_ENTRY_VERSION,
+    CONF_POLL_INTERVAL,
+    DEFAULT_NAME,
+    DEFAULT_POLL_INTERVAL,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
-     {
-         vol.Required(CONF_HOST, default="192.168.1.70", description="Open Karotz device IP address"): str,
-         vol.Required(CONF_NAME, default="Open Karotz"): str,
-     }
- )
 
+class OpenKarotzConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for OpenKarotz."""
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
-    """Validate the user input allows us to connect."""
-    host = data[CONF_HOST]
+    VERSION = CONFIG_ENTRY_VERSION
+    MINOR_VERSION = 1
 
-    if not host:
-        raise InvalidHost
+    def __init__(self) -> None:
+        self._discovered: dict[str, Any] = {}
 
-    return {"title": data[CONF_NAME]}
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> "OpenKarotzOptionsFlow":
+        return OpenKarotzOptionsFlow()
 
-
-class OpenKarotzConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Open Karotz."""
-
-    VERSION = 1
+    async def _async_validate(self, host: str) -> dict[str, Any]:
+        """Reach the device; returns status payload. Raises on failure."""
+        api = OpenKarotzAPI(host, async_get_clientsession(self.hass))
+        return await api.get_status()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the initial step."""
-        if user_input is None:
-            return self.async_show_form(
-                step_id="user", data_schema=STEP_USER_DATA_SCHEMA
-            )
-
-        errors = {}
-
-        try:
-            await validate_input(self.hass, user_input)
-        except InvalidHost:
-            errors[CONF_HOST] = "invalid_host"
-        except Exception:
-            _LOGGER.exception("Unexpected exception")
-            errors["base"] = "unknown"
-        else:
-            return self.async_create_entry(
-                title=user_input[CONF_NAME], data=user_input
-            )
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host = user_input[CONF_HOST].strip()
+            try:
+                status = await self._async_validate(host)
+            except OpenKarotzError:
+                errors[CONF_HOST] = "cannot_connect"
+            else:
+                mac = status.get("wlan_mac") or status.get("eth_mac")
+                unique_id = mac if mac and mac != "00:00:00:00:00:00" else host
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+                return self.async_create_entry(
+                    title=user_input.get(CONF_NAME) or DEFAULT_NAME,
+                    data={CONF_HOST: host, CONF_NAME: user_input.get(CONF_NAME, DEFAULT_NAME)},
+                )
 
         return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_HOST, default="192.168.1.70"): str,
+                    vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        errors: dict[str, str] = {}
+        if user_input is not None and entry is not None:
+            host = user_input[CONF_HOST].strip()
+            try:
+                await self._async_validate(host)
+            except OpenKarotzError:
+                errors[CONF_HOST] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry, data={**entry.data, CONF_HOST: host}
+                )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {vol.Required(CONF_HOST, default=entry.data[CONF_HOST] if entry else ""): str}
+            ),
+            errors=errors,
         )
 
 
-class InvalidHost(HomeAssistantError):
-    """Error to indicate there is an invalid hostname."""
+class OpenKarotzOptionsFlow(OptionsFlow):
+    """Options: poll interval."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+        current = self.config_entry.options.get(
+            CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_POLL_INTERVAL,
+                        default=current,
+                        description={"suggested_value": current},
+                    ): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
+                }
+            ),
+        )

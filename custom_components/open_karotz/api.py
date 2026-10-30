@@ -1,284 +1,293 @@
-"""API module for Open Karotz integration."""
+"""API client for OpenKarotz devices.
+
+Design constraints (live-verified on firmware web 210 / rootfs 12.07.19.00):
+- The device runs busybox httpd which REFUSES concurrent requests: exactly one
+  request may be in flight at a time (enforced with an asyncio lock).
+- Playback endpoints (sound?id=, apps/moods) are synchronous and block the CGI
+  until audio finishes -> long timeouts.
+- Endpoints that call EarsReset (sleep, wakeup, ears_reset, ears_random,
+  rfid_start_record) hang for 60s+ on affected units -> fire-and-forget mode:
+  short timeout, timeout is NOT an error, truth comes from status polling.
+- Response schemas are not uniform: status/get_free_space have no "return"
+  field, tts returns a boolean, some scripts emit malformed JSON.
+"""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import Any
+from urllib.parse import quote
 
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-from .const import BASE_URL
-
-if TYPE_CHECKING:
-    from aiohttp import ClientSession
+import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
+TIMEOUT_STATUS = 10
+TIMEOUT_ACTION = 15
+TIMEOUT_PLAYBACK = 90
+TIMEOUT_FAF = 2  # fire-and-forget
+
+
+class OpenKarotzError(Exception):
+    """Base error."""
+
+
+class OpenKarotzConnectionError(OpenKarotzError):
+    """Device unreachable (maps to ConfigEntryNotReady)."""
+
+
+class OpenKarotzRefused(OpenKarotzError):
+    """Device returned return != 0 (e.g. 'rabbit is sleeping')."""
+
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg)
+        self.msg = msg
+
 
 class OpenKarotzAPI:
-    """Class to interact with Open Karotz API."""
+    """Serialized HTTP client for one OpenKarotz device."""
 
-    def __init__(self, host: str, websession: ClientSession | None = None) -> None:
-        """Initialize the API."""
+    def __init__(self, host: str, websession: aiohttp.ClientSession) -> None:
         self._host = host
-        self._websession = websession
+        self._session = websession
+        self._lock = asyncio.Lock()
 
-    async def _async_get(self, endpoint: str) -> dict | None:
-        """Perform GET request to Open Karotz."""
-        session = self._websession or async_get_clientsession(None)
+    @property
+    def host(self) -> str:
+        return self._host
+
+    @property
+    def base(self) -> str:
+        return f"http://{self._host}"
+
+    # ------------------------------------------------------------------ core
+    async def _get(
+        self,
+        path: str,
+        *,
+        timeout: float = TIMEOUT_ACTION,
+        raw: bool = False,
+    ) -> Any:
+        """One in-flight GET. Returns parsed JSON dict (or bytes if raw).
+
+        Raises OpenKarotzConnectionError on connect/transport failure and
+        OpenKarotzRefused when the payload carries return != 0.
+        """
+        url = f"{self.base}{path}"
+        async with self._lock:
+            try:
+                async with self._session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=timeout)
+                ) as resp:
+                    if resp.status == 404:
+                        raise OpenKarotzRefused(f"{path}: endpoint not found (404)")
+                    body = await resp.read()
+            except asyncio.TimeoutError as err:
+                raise OpenKarotzConnectionError(f"{path}: timeout") from err
+            except aiohttp.ClientError as err:
+                raise OpenKarotzConnectionError(f"{path}: {err}") from err
+
+        if raw:
+            return body
         try:
-            async with session.get(f"http://{self._host}{endpoint}") as resp:
-                content_type = resp.headers.get("Content-Type", "")
-                if resp.status == 200:
-                    if "application/json" in content_type:
-                        return await resp.json()
-                    text = await resp.text()
-                    try:
-                        return json.loads(text)
-                    except json.JSONDecodeError:
-                        _LOGGER.error("Failed to parse JSON from %s: %s", endpoint, text[:200])
-                        return None
-                _LOGGER.error("Failed to fetch %s: %s", endpoint, resp.status)
-                return None
-        except Exception as err:
-            _LOGGER.error("Error fetching %s: %s", endpoint, err)
-            return None
+            data = json.loads(body.decode("utf-8", "replace"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            _LOGGER.debug("Non-JSON response from %s: %.120s", path, body)
+            raise OpenKarotzRefused(f"{path}: malformed response") from exc
+        if isinstance(data, dict) and not self.ok(data):
+            raise OpenKarotzRefused(str(data.get("msg") or data.get("return")))
+        return data
 
-    async def get_free_space(self) -> dict | None:
-        """Get storage space information."""
-        return await self._async_get("/cgi-bin/get_free_space")
-
-    async def set_led_color(self, color: str) -> bool:
-        """Set LED color."""
-        session = self._websession or async_get_clientsession(None)
+    async def _faf(self, path: str) -> bool:
+        """Fire-and-forget: dispatch, return False if it hangs (expected)."""
         try:
-            async with session.get(f"http://{self._host}/cgi-bin/leds?color={color}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error setting LED color: %s", err)
+            await self._get(path, timeout=TIMEOUT_FAF)
+            return True
+        except OpenKarotzError:
+            _LOGGER.debug("fire-and-forget %s dispatched (no prompt ack)", path)
             return False
 
-    async def set_ear_position(self, left: int, right: int) -> bool:
-        """Set ear position."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/ears?left={left}&right={right}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error setting ear position: %s", err)
-            return False
+    @staticmethod
+    def ok(data: dict) -> bool:
+        """Schema-tolerant success check: '0', 0, True or missing return."""
+        ret = data.get("return", "0")
+        return ret in ("0", 0, True, "true", "True")
 
-    async def reset_ears(self) -> bool:
-        """Reset ears to default position."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/ears_reset") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error resetting ears: %s", err)
-            return False
+    @staticmethod
+    def _params(**kwargs: object) -> str:
+        parts = []
+        for key, val in kwargs.items():
+            if val is None:
+                continue
+            parts.append(f"{key}={quote(str(val), safe='')}")
+        return ("?" + "&".join(parts)) if parts else ""
 
-    async def random_ears(self) -> bool:
-        """Set ears to random position."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/ears_random") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error setting random ears: %s", err)
-            return False
+    # ------------------------------------------------------------- telemetry
+    async def get_status(self) -> dict:
+        return await self._get("/cgi-bin/status", timeout=TIMEOUT_STATUS)
 
-    async def play_sound(self, sound_id: str) -> bool:
-        """Play local sound."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/sound?id={sound_id}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error playing sound: %s", err)
-            return False
+    async def get_version(self) -> dict:
+        return await self._get("/cgi-bin/get_version", timeout=TIMEOUT_STATUS)
 
-    async def play_sound_url(self, url: str) -> bool:
-        """Play sound from URL."""
-        session = self._websession or async_get_clientsession(None)
-        import urllib.parse
-        encoded_url = urllib.parse.quote(url)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/sound?url={encoded_url}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error playing URL: %s", err)
-            return False
+    async def get_free_space(self) -> dict:
+        return await self._get("/cgi-bin/get_free_space", timeout=TIMEOUT_STATUS)
 
-    async def play_tts(self, text: str, voice: str = "5") -> bool:
-        """Play text-to-speech."""
-        session = self._websession or async_get_clientsession(None)
-        import urllib.parse
-        encoded_text = urllib.parse.quote(text)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/tts?text={encoded_text}&voice={voice}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error playing TTS: %s", err)
-            return False
+    async def voice_list(self) -> list[dict]:
+        data = await self._get("/cgi-bin/voice_list", timeout=TIMEOUT_STATUS)
+        return data.get("voices", [])
 
-    async def play_mood(self, mood_id: int) -> bool:
-        """Play mood."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/apps/moods?id={mood_id}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error playing mood: %s", err)
-            return False
+    async def sound_list(self) -> list[dict]:
+        data = await self._get("/cgi-bin/sound_list", timeout=TIMEOUT_STATUS)
+        return data.get("sounds", [])
 
-    async def play_random_mood(self) -> bool:
-        """Play random mood."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/apps/moods") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error playing random mood: %s", err)
-            return False
+    async def moods_list(self) -> list[dict]:
+        data = await self._get("/cgi-bin/moods_list", timeout=TIMEOUT_STATUS)
+        return data.get("moods", [])
 
-    async def capture_snapshot(self) -> bytes | None:
-        """Capture snapshot."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/snapshot?silent=1") as resp:
-                if resp.status == 200:
-                    content_type = resp.headers.get("Content-Type", "")
-                    if "image" in content_type:
-                        return await resp.read()
-                    text = await resp.text()
-                    try:
-                        json_data = json.loads(text)
-                        _LOGGER.error("Snapshot API returned JSON instead of image: %s", json_data)
-                        return None
-                    except json.JSONDecodeError:
-                        _LOGGER.error("Snapshot API returned non-image content: %s", text[:100])
-                        return None
-                _LOGGER.error("Failed to capture snapshot: %s", resp.status)
-                return None
-        except Exception as err:
-            _LOGGER.error("Error capturing snapshot: %s", err)
-            return None
+    async def radios_list(self) -> list[dict]:
+        data = await self._get("/cgi-bin/radios_list", timeout=TIMEOUT_STATUS)
+        return data.get("streams", [])
 
+    async def display_cache(self) -> dict:
+        return await self._get("/cgi-bin/display_cache", timeout=TIMEOUT_STATUS)
+
+    # ------------------------------------------------------------------ led
+    async def set_led(
+        self,
+        color: str,
+        *,
+        color2: str | None = None,
+        pulse: int | None = None,
+        blink: int | None = None,
+        speed: int | None = None,
+        nomemory: int | None = None,
+    ) -> dict:
+        return await self._get(
+            "/cgi-bin/leds"
+            + self._params(
+                color=color, color2=color2, pulse=pulse, blink=blink,
+                speed=speed, nomemory=nomemory,
+            )
+        )
+
+    # ----------------------------------------------------------------- ears
+    async def ears_move(self, left: int, right: int) -> dict:
+        """Move ears 0-16. Always noreset=1: the reset path hangs on this fw."""
+        return await self._get(
+            "/cgi-bin/ears" + self._params(left=left, right=right, noreset=1)
+        )
+
+    async def ears_mode(self, disable: bool) -> dict | bool:
+        """Enable/disable ear motors. Enable path runs EarsReset -> FAF."""
+        path = "/cgi-bin/ears_mode" + self._params(disable=1 if disable else 0)
+        if disable:
+            return await self._get(path)
+        return await self._faf(path)
+
+    # ---------------------------------------------------------------- audio
+    async def play_sound(self, sound_id: str) -> dict:
+        return await self._get(
+            "/cgi-bin/sound" + self._params(id=sound_id), timeout=TIMEOUT_PLAYBACK
+        )
+
+    async def play_mood(self, mood_id: str | None = None) -> dict:
+        return await self._get(
+            "/cgi-bin/apps/moods" + self._params(id=mood_id), timeout=TIMEOUT_PLAYBACK
+        )
+
+    async def tts(
+        self,
+        text: str,
+        *,
+        voice: str | None = None,
+        engine: str | None = None,
+        speed: str | None = None,
+        nocache: bool = False,
+        mute: bool = False,
+    ) -> dict:
+        return await self._get(
+            "/cgi-bin/tts"
+            + self._params(
+                text=text, voice=voice, engine=engine, speed=speed,
+                nocache=1 if nocache else None, mute=1 if mute else None,
+            ),
+            timeout=TIMEOUT_PLAYBACK,
+        )
+
+    # --------------------------------------------------------------- camera
+    async def snapshot(self, silent: bool = True) -> dict:
+        """Returns {'filename':..., 'thumb':...} — NOT image bytes."""
+        return await self._get(
+            "/cgi-bin/snapshot" + self._params(silent=1 if silent else None),
+            timeout=TIMEOUT_PLAYBACK,
+        )
+
+    async def snapshot_get(self, filename: str) -> bytes:
+        return await self._get(
+            "/cgi-bin/snapshot_get" + self._params(filename=filename),
+            timeout=TIMEOUT_STATUS,
+            raw=True,
+        )
+
+    async def snapshot_list(self) -> list[dict]:
+        data = await self._get("/cgi-bin/snapshot_list", timeout=TIMEOUT_STATUS)
+        return data.get("snapshots", [])
+
+    async def clear_snapshots(self) -> dict:
+        return await self._get("/cgi-bin/clear_snapshots")
+
+    # --------------------------------------------------------------- system
     async def sleep(self) -> bool:
-        """Put Karotz to sleep."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/sleep") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error sleeping: %s", err)
-            return False
+        return await self._faf("/cgi-bin/sleep")
 
-    async def wake_up(self) -> bool:
-        """Wake up Karotz."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/wake_up") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error waking up: %s", err)
-            return False
+    async def wakeup(self, silent: bool = False) -> bool:
+        return await self._faf(
+            "/cgi-bin/wakeup" + self._params(silent=1 if silent else None)
+        )
 
-    async def clear_cache(self) -> bool:
-        """Clear cache."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/clear_cache") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error clearing cache: %s", err)
-            return False
+    async def clear_cache(self) -> dict:
+        return await self._get("/cgi-bin/clear_cache")
 
-    async def get_rfid_list(self) -> dict | None:
-        """Get RFID list."""
-        return await self._async_get("/cgi-bin/rfid_list")
+    async def setclock(self) -> dict:
+        return await self._get("/cgi-bin/setclock", timeout=TIMEOUT_PLAYBACK)
 
-    async def stop(self) -> bool:
-        """Stop playback."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/stop") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error stopping: %s", err)
-            return False
+    async def reboot(self) -> dict:
+        return await self._get("/cgi-bin/reboot")
 
-    async def set_volume(self, volume: float) -> bool:
-        """Set volume level."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            # Volume is 0.0-1.0, convert to 0-100 for Karotz
-            volume_percent = int(volume * 100)
-            async with session.get(f"http://{self._host}/cgi-bin/volume?level={volume_percent}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error setting volume: %s", err)
-            return False
+    async def squeezebox(self, cmd: str) -> dict:
+        return await self._get(
+            "/cgi-bin/squeezebox" + self._params(cmd=cmd), timeout=TIMEOUT_PLAYBACK
+        )
 
-    async def set_mood(self, mood_id: int) -> bool:
-        """Set mood."""
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/apps/moods?id={mood_id}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error setting mood: %s", err)
-            return False
+    # ----------------------------------------------------------------- rfid
+    async def rfid_list(self) -> list[dict]:
+        data = await self._get("/cgi-bin/rfid_list", timeout=TIMEOUT_STATUS)
+        return data.get("tags", [])
 
-    async def set_ear_position_single(self, position: int) -> bool:
-        """Set ear position using a single position value (0-100)."""
-        # Convert 0-100 position to 0-16 range
-        ear_position = int(position * 16 / 100)
-        return await self.set_ear_position(ear_position, ear_position)
+    async def rfid_info(self, tag: str) -> dict:
+        return await self._get("/cgi-bin/rfid_info" + self._params(tag=tag))
 
-    async def set_ear_rotation(self, left: int, right: int) -> bool:
-        """Set ear rotation (1-5) for left and right ears independently.
-        
-        Args:
-            left: Left ear rotation (1-5)
-            right: Right ear rotation (1-5)
-            
-        Returns:
-            True if successful, False otherwise
-        """
-        if not (1 <= left <= 5):
-            _LOGGER.error("Left ear rotation must be between 1-5, got %d", left)
-            return False
-        if not (1 <= right <= 5):
-            _LOGGER.error("Right ear rotation must be between 1-5, got %d", right)
-            return False
-        session = self._websession or async_get_clientsession(None)
-        try:
-            async with session.get(f"http://{self._host}/cgi-bin/ears?left={left}&right={right}") as resp:
-                return resp.status == 200
-        except Exception as err:
-            _LOGGER.error("Error setting ear rotation: %s", err)
-            return False
+    async def rfid_rename(
+        self, tag: str, name: str | None = None, color: str | None = None
+    ) -> dict:
+        return await self._get(
+            "/cgi-bin/rfid_rename" + self._params(tag=tag, name=name, color=color)
+        )
 
-    async def set_ear_rotation_together(self, rotation: int) -> bool:
-        """Set both ears to the same rotation (1-5).
-        
-        Args:
-            rotation: Both ears rotation (1-5)
-            
-        Returns:
-            True if successful, False otherwise
-        """
-        if not (1 <= rotation <= 5):
-            _LOGGER.error("Ear rotation must be between 1-5, got %d", rotation)
-            return False
-        return await self.set_ear_rotation(rotation, rotation)
+    async def rfid_delete(self, tag: str) -> dict:
+        return await self._get("/cgi-bin/rfid_delete" + self._params(tag=tag))
 
-    async def get_ear_position(self) -> dict | None:
-        """Get current ear position.
-        
-        Returns:
-            Dict with left and right position values, or None on error
-        """
-        return await self._async_get("/cgi-bin/ears")
+    async def rfid_start_record(self) -> bool:
+        return await self._faf("/cgi-bin/rfid_start_record")
+
+    async def rfid_stop_record(self) -> dict:
+        return await self._get("/cgi-bin/rfid_stop_record", timeout=TIMEOUT_PLAYBACK)
+
+    async def rfid_assign_url(
+        self, tag: str, url: str, param: str | None = None, name: str | None = None
+    ) -> dict:
+        return await self._get(
+            "/cgi-bin/rfid_assign_url"
+            + self._params(tag=tag, url=url, param=param, name=name)
+        )
