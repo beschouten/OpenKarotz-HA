@@ -214,8 +214,8 @@ def _register_rfid_webhook(
         device_id = None
         mac = entry.unique_id
         if mac:
-            dev = async_get_device_registry(hass).async_get_device(
-                identifiers={(DOMAIN, mac)}
+            dev = async_get_device_registry(hass).async_get_device_by_identifier(
+                (DOMAIN, mac), entry.entry_id
             )
             device_id = dev.id if dev else None
         hass.bus.async_fire(
@@ -242,11 +242,23 @@ def _runtime_for_device(hass: HomeAssistant, device_id: str) -> KarotzRuntime:
     dev = async_get_device_registry(hass).async_get(device_id)
     if dev is None:
         raise HomeAssistantError(f"Unknown device: {device_id}")
-    for ce_id in dev.config_entries:
-        entry = hass.config_entries.async_get_entry(ce_id)
-        if entry and entry.domain == DOMAIN and getattr(entry, "runtime_data", None):
-            return entry.runtime_data
+    entry = hass.config_entries.async_get_entry(dev.config_entry_id or "")
+    if entry and entry.domain == DOMAIN and getattr(entry, "runtime_data", None):
+        return entry.runtime_data
     raise HomeAssistantError(f"Device {device_id} is not an OpenKarotz device")
+
+
+def _guard(fn):
+    """Surface device refusals as clean service errors (400, not 500)."""
+
+    @functools.wraps(fn)
+    async def wrapper(call: ServiceCall) -> None:
+        try:
+            await fn(call)
+        except OpenKarotzError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    return wrapper
 
 
 def _register_rfid_services(hass: HomeAssistant) -> None:
@@ -257,20 +269,24 @@ def _register_rfid_services(hass: HomeAssistant) -> None:
         runtime = _runtime_for_device(hass, call.data["device_id"])
         await runtime.api.rfid_start_record()  # fire-and-forget (EarsReset family)
 
+    @_guard
     async def handle_stop_record(call: ServiceCall) -> None:
         runtime = _runtime_for_device(hass, call.data["device_id"])
         await runtime.api.rfid_stop_record()
 
+    @_guard
     async def handle_rename(call: ServiceCall) -> None:
         runtime = _runtime_for_device(hass, call.data["device_id"])
         await runtime.api.rfid_rename(
             call.data["tag"], name=call.data.get("name"), color=call.data.get("color")
         )
 
+    @_guard
     async def handle_delete(call: ServiceCall) -> None:
         runtime = _runtime_for_device(hass, call.data["device_id"])
         await runtime.api.rfid_delete(call.data["tag"])
 
+    @_guard
     async def handle_assign_webhook(call: ServiceCall) -> None:
         """Point a tag's action at our webhook so scans fire events."""
         runtime = _runtime_for_device(hass, call.data["device_id"])
