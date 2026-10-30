@@ -1,9 +1,14 @@
-"""TTS entity for OpenKarotz (device-side Acapela synthesis)."""
+"""TTS entity for OpenKarotz (device-side Acapela synthesis).
+
+The Karotz synthesizes and plays locally, so async_speak is overridden to
+drive the device directly (no audio stream is produced for media players).
+"""
 from __future__ import annotations
 
 import logging
 
-from homeassistant.components.tts import ATTR_OPTIONS, TTSEntity
+from homeassistant.components.tts import Voice
+from homeassistant.components.tts.entity import TextToSpeechEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -33,32 +38,41 @@ async def async_setup_entry(
     async_add_entities([KarotzTTS(entry, runtime, voices)])
 
 
-class KarotzTTS(OpenKarotzEntity, TTSEntity):
+class KarotzTTS(OpenKarotzEntity, TextToSpeechEntity):
     """Speak text through the Karotz speaker."""
 
     _attr_translation_key = "tts"
+    _attr_supported_languages = ["en", "fr"]
+    _attr_default_language = "en"
+    _attr_supported_options = ["voice"]
+    _attr_default_options = {"voice": DEFAULT_VOICE}
 
     def __init__(
         self, entry: ConfigEntry, runtime: KarotzRuntime, voices: list[dict]
     ) -> None:
         super().__init__(entry, runtime, "tts")
-        self._attr_name = None  # device name + "text to speech"
-        if voices:
-            self._attr_supported_voices = {v["id"]: v.get("lang", v["id"]) for v in voices}
-            self._attr_default_voice = DEFAULT_VOICE
-            self._attr_default_language = None
+        self._voices = [
+            Voice(value=v["id"], name=v.get("lang", v["id"])) for v in voices
+        ]
 
-    async def async_speak_text(
-        self, media_id: str, language: str | None, options: dict | None
+    def async_get_supported_voices(self, language: str) -> list[Voice] | None:
+        return self._voices or None
+
+    async def async_speak(
+        self,
+        media_player_entity_id: list[str],
+        message: str,
+        cache: bool,
+        language: str | None = None,
+        options: dict | None = None,
     ) -> None:
-        voice = (options or {}).get(ATTR_OPTIONS) or self.default_voice
+        """Speak on the Karotz itself (device-side synthesis)."""
+        voice = (options or {}).get("voice") or DEFAULT_VOICE
         try:
-            await self._runtime.api.tts(media_id, voice=voice)
+            await self._runtime.api.tts(message, voice=voice)
         except OpenKarotzError as err:
             raise HomeAssistantError(f"TTS failed: {err}") from err
 
-    async def async_speak_text_stream(
-        self, media_id: str, language: str | None, options: dict | None
-    ) -> None:
-        """Synthesis happens on-device; no audio stream is produced."""
-        raise NotImplementedError("OpenKarotz synthesizes on-device; no stream")
+    def async_get_tts_audio(self, message, language, options):  # noqa: ANN001
+        """No audio stream: the device plays the audio itself."""
+        return None, None
