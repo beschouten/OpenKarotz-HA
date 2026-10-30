@@ -232,7 +232,7 @@ def _register_rfid_webhook(
 
     webhook.async_register(
         hass, DOMAIN, f"OpenKarotz RFID {runtime.api.host}", webhook_id, handle_scan,
-        allow_get_method=True,  # the Karotz GETs the assigned URL on scan
+        allowed_methods={"GET", "POST"},  # the Karotz GETs the assigned URL on scan
     )
     entry.async_on_unload(functools.partial(webhook.async_unregister, hass, webhook_id))
 
