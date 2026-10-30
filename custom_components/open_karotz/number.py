@@ -9,10 +9,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from . import KarotzRuntime
 from .api import OpenKarotzError
 from .const import EAR_HORIZONTAL, EAR_MAX, EAR_MIN
 from .entity import OpenKarotzEntity
-from . import KarotzRuntime
 
 _LOGGER = logging.getLogger(__name__)
 

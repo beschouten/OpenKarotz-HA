@@ -29,7 +29,7 @@ def _int(value: str | None):
 class KarotzSensorDescription(SensorEntityDescription):
     """Sensor description bound to a status key."""
 
-    value: Callable[[dict], object] = lambda s: s  # noqa: E731
+    value: Callable[[dict], object] = lambda s: s
 
 
 DESCRIPTIONS: tuple[KarotzSensorDescription, ...] = (

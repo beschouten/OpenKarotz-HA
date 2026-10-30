@@ -17,8 +17,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OpenKarotzAPI, OpenKarotzError
 from .const import (
-    CONFIG_ENTRY_VERSION,
     CONF_POLL_INTERVAL,
+    CONFIG_ENTRY_VERSION,
     DEFAULT_NAME,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
@@ -40,7 +40,7 @@ class OpenKarotzConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: ConfigEntry,
-    ) -> "OpenKarotzOptionsFlow":
+    ) -> OpenKarotzOptionsFlow:
         return OpenKarotzOptionsFlow()
 
     async def _async_validate(self, host: str) -> dict[str, Any]:

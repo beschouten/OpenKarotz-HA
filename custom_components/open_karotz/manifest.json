@@ -8,13 +8,13 @@
   "documentation": "https://github.com/beschouten/OpenKarotz-HA",
   "integration_type": "device",
   "iot_class": "local_polling",
-  "version": "4.0.0.dev0",
+  "version": "4.0.0",
   "requirements": [],
   "dependencies": [],
   "after_dependencies": [
     "diagnostics"
   ],
-  "homeassistant": "2025.1.0",
+  "homeassistant": "2026.9.0",
   "loggers": [
     "custom_components.open_karotz"
   ]

@@ -9,9 +9,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from . import KarotzRuntime
 from .api import OpenKarotzError
 from .entity import OpenKarotzEntity
-from . import KarotzRuntime
 
 
 async def async_setup_entry(

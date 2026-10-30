@@ -15,10 +15,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from . import KarotzRuntime
 from .api import OpenKarotzError
 from .const import EFFECT_BLINK, EFFECT_OFF, EFFECT_PULSE, EFFECTS
 from .entity import OpenKarotzEntity
-from . import KarotzRuntime
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class KarotzLed(OpenKarotzEntity, LightEntity):
     """
 
     _attr_translation_key = "led"
-    _attr_supported_color_modes = {ColorMode.RGB}
+    _attr_supported_color_modes = {ColorMode.RGB}  # noqa: RUF012
     _attr_color_mode = ColorMode.RGB
     _attr_supported_features = LightEntityFeature.EFFECT
     _attr_effect_list = EFFECTS
@@ -85,7 +85,7 @@ class KarotzLed(OpenKarotzEntity, LightEntity):
         effect = kwargs.get(ATTR_EFFECT, EFFECT_OFF)
         pulse, blink = self._effect_params(effect)
         self._effect = effect
-        color = "%02x%02x%02x" % tuple(rgb)
+        color = "{:02x}{:02x}{:02x}".format(*rgb)
         try:
             await self._runtime.api.set_led(color, pulse=pulse, blink=blink)
         except OpenKarotzError as err:

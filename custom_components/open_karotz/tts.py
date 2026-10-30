@@ -14,9 +14,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from . import KarotzRuntime
 from .api import OpenKarotzError
 from .entity import OpenKarotzEntity
-from . import KarotzRuntime
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,10 +42,10 @@ class KarotzTTS(OpenKarotzEntity, TextToSpeechEntity):
     """Speak text through the Karotz speaker."""
 
     _attr_translation_key = "tts"
-    _attr_supported_languages = ["en", "fr"]
+    _attr_supported_languages = ["en", "fr"]  # noqa: RUF012
     _attr_default_language = "en"
-    _attr_supported_options = ["voice"]
-    _attr_default_options = {"voice": DEFAULT_VOICE}
+    _attr_supported_options = ["voice"]  # noqa: RUF012
+    _attr_default_options = {"voice": DEFAULT_VOICE}  # noqa: RUF012
 
     def __init__(
         self, entry: ConfigEntry, runtime: KarotzRuntime, voices: list[dict]
@@ -73,6 +73,6 @@ class KarotzTTS(OpenKarotzEntity, TextToSpeechEntity):
         except OpenKarotzError as err:
             raise HomeAssistantError(f"TTS failed: {err}") from err
 
-    def async_get_tts_audio(self, message, language, options):  # noqa: ANN001
+    def async_get_tts_audio(self, message, language, options):
         """No audio stream: the device plays the audio itself."""
         return None, None

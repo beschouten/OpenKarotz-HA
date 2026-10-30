@@ -1,7 +1,7 @@
 """Button platform: maintenance actions."""
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
@@ -10,16 +10,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from . import KarotzRuntime
 from .api import OpenKarotzError
 from .entity import OpenKarotzEntity
-from . import KarotzRuntime
 
 
 @dataclass(frozen=True, kw_only=True)
 class KarotzButtonDescription(ButtonEntityDescription):
     """Button bound to an API coroutine."""
 
-    action: Callable = lambda api: api.clear_cache()  # noqa: E731
+    action: Callable = lambda api: api.clear_cache()
 
 
 DESCRIPTIONS: tuple[KarotzButtonDescription, ...] = (

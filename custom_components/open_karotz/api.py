@@ -126,7 +126,7 @@ class OpenKarotzAPI:
                     if resp.status == 404:
                         raise OpenKarotzRefused(f"{path}: endpoint not found (404)")
                     body = await resp.read()
-            except asyncio.TimeoutError as err:
+            except TimeoutError as err:
                 raise OpenKarotzConnectionError(f"{path}: timeout") from err
             except aiohttp.ClientError as err:
                 raise OpenKarotzConnectionError(f"{path}: {err}") from err
@@ -153,9 +153,15 @@ class OpenKarotzAPI:
 
     @staticmethod
     def ok(data: dict) -> bool:
-        """Schema-tolerant success check: '0', 0, True or missing return."""
+        """Schema-tolerant success check: '0', 0, True or missing return.
+
+        Note: `True == 1` in Python, so the int/bool cases must be tested
+        explicitly — a plain membership check would accept return=1 as OK.
+        """
         ret = data.get("return", "0")
-        return ret in ("0", 0, True, "true", "True")
+        if ret is True:
+            return True
+        return ret in ("0", 0, "true", "True")
 
     @staticmethod
     def _params(**kwargs: object) -> str:

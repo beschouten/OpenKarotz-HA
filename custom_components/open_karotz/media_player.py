@@ -22,9 +22,9 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.event import async_call_later
 
+from . import KarotzRuntime
 from .api import OpenKarotzError
 from .entity import OpenKarotzEntity
-from . import KarotzRuntime
 
 _LOGGER = logging.getLogger(__name__)
 

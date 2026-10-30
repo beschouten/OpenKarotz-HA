@@ -50,7 +50,7 @@ class KarotzRuntime:
     """Runtime data per config entry."""
 
     api: OpenKarotzAPI
-    coordinator: "KarotzCoordinator"
+    coordinator: KarotzCoordinator
     version: dict[str, Any] = field(default_factory=dict)
     capabilities: dict[str, bool] = field(default_factory=dict)
 
