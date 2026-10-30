@@ -26,9 +26,12 @@ _LOGGER = logging.getLogger(__name__)
 # Platforms are added in phases P2-P5 of the v4 plan.
 PLATFORMS: list[Platform] = [
     Platform.LIGHT,
+    Platform.MEDIA_PLAYER,
+    Platform.SELECT,
     Platform.NUMBER,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.TTS,
 ]
 
 type OpenKarotzConfigEntry = ConfigEntry[KarotzRuntime]

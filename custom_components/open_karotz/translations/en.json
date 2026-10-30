@@ -147,6 +147,21 @@
       "ears_enabled": {
         "name": "Ear motors"
       }
+    },
+    "media_player": {
+      "player": {
+        "name": "Speaker"
+      }
+    },
+    "select": {
+      "sound": {
+        "name": "Play sound"
+      }
+    },
+    "tts": {
+      "tts": {
+        "name": "Text to speech"
+      }
     }
   }
 }
